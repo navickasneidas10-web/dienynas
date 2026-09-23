@@ -10,5 +10,5 @@ window.CONFIG = {
   SUPABASE_ANON_KEY: "sb_publishable_ewVMnx42er12Yjs2TYZy5g_R47V3flP",
   // Prisijungimo vardas paverčiamas techniniu el. pašto adresu Supabase Auth sistemai,
   // pvz. „r.jonaitiene“ → „r.jonaitiene@dienynas.example.com“. Laiškai juo nesiunčiami.
-  LOGIN_EMAIL_DOMAIN: "dienynas.example.com",
+  LOGIN_EMAIL_DOMAIN: "navickasneidas10-web.github.io",
 };
