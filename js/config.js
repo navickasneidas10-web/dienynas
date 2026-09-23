@@ -6,8 +6,8 @@
    NIEKADA neįrašykite čia „service_role“ rakto!
    ===================================================================== */
 window.CONFIG = {
-  SUPABASE_URL: "sb_publishable_UXk_2jQhQfk2OB2QVxTX7A_XacYQv6j",
-  SUPABASE_ANON_KEY: "sb_secret_h68Ci4SzVwSf_mksOxGUDg_K30w4HUX",
+  SUPABASE_URL: "https://alrhfsvufqgxwzwsbfcc.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_ewVMnx42er12Yjs2TYZy5g_R47V3flP",
   // Prisijungimo vardas paverčiamas techniniu el. pašto adresu Supabase Auth sistemai,
   // pvz. „r.jonaitiene“ → „r.jonaitiene@dienynas.example.com“. Laiškai juo nesiunčiami.
   LOGIN_EMAIL_DOMAIN: "dienynas.example.com",
