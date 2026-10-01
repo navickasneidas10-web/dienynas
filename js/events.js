@@ -59,6 +59,12 @@ document.addEventListener("click",async e=>{
   case"ttEdit":ttEditDlg();break;
   case"delTt":core.timetable=core.timetable.filter(t=>t.id!==v);ttEditDlg();pendingRender=true;await DB.del("timetable",{id:v});break;
   case"openLesson":if(lessonDirty&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?"))return;openLesson(el.dataset.g,el.dataset.d);break;
+  case"mtab":ui[el.dataset.k]=v;render();break;
+  case"dTab":ui.dTab=v;render();break;
+  case"stPer":ui.stPer=v;render();break;
+  case"ltab":if(lessonDirty&&v!=="pamoka"&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?"))return;if(v!=="pamoka")lessonDirty=false;ui.ltab=v;render();break;
+  case"ntAll":$$('form[data-form="saveNotes"] input[name=st]').forEach(c=>c.checked=v==="1");break;
+  case"delNoteL":{const d=G(el.dataset.g);d.notes=d.notes.filter(y=>y.id!==v);render();if(await DB.del("notes",{id:v}))toast("Įrašas ištrintas");break;}
   case"lessonMove":{if(lessonDirty&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?"))return;const g=grp(ui.gid);const ds=journalDates(g,ui.pid);const i=ds.indexOf(ui.lesson)+ +v;if(ds[i]){lessonDirty=false;ui.lesson=ds[i];render();}break;}
   case"lv":{const{gid,dt,ro}=ls;if(ro)return;const sid=el.dataset.s;const d=G(gid);const gs=d.grades.filter(x=>x.s===sid&&x.d===dt);const cur=gs[gs.length-1];const val=parseV(v);
     const l=d.lessons.find(x=>x.d===dt);const type=ls.types[sid]||(cur&&cur.t)||lessonDefType(l);
@@ -118,9 +124,9 @@ document.addEventListener("click",async e=>{
 
   /* ---------- mokinys, tėvai ---------- */
   case"stuLesson":{const g=grp(el.dataset.g),d=el.dataset.d,L=G(g.id);const l=L.lessons.find(x=>x.d===d)||{};const sid=viewedStudent();const gs=L.grades.filter(x=>x.s===sid&&x.d===d);const at=L.att.find(x=>x.s===sid&&x.d===d);const nt=L.notes.filter(x=>x.s===sid&&x.d===d);
-    openDlg(dlgHead(esc(subjName(g.subjectId)),`${d} · ${esc(uNameFL(g.teacherId))}`)+`<div class="dlg-b"><div><div class="small muted">Tema</div>${esc(l.topic||"—")}${l.t?` <span class="tag bad">${esc(TYPE_NAME[l.t])}</span>`:""}</div>${l.cw?`<div><div class="small muted">Klasės darbas</div>${esc(l.cw)}</div>`:""}<div><div class="small muted">Namų darbai</div>${esc(l.hw||"—")}</div>
+    openDlg(dlgHead(esc(subjName(g.subjectId)),`${d} · ${esc(uNameFL(g.teacherId))}`)+`<div class="dlg-b"><div><div class="small muted">Tema</div>${esc(l.topic||"—")}${l.t?` <span class="tag bad">${esc(TYPE_NAME[l.t])}</span>`:""}</div>${l.cw?`<div><div class="small muted">Klasės darbas</div>${esc(l.cw)}</div>`:""}<div><div class="small muted">Namų darbai</div>${esc(l.hw||"—")}${l.hw&&l.hwDue?` <span class="tag">atlikti iki ${l.hwDue}</span>`:""}</div>
     <div><div class="small muted">Įvertinimai</div>${gs.map(x=>`<div>${chip(x,false)} ${esc(TYPE_NAME[x.t])}${x.c?` — ${esc(x.c)}`:""}</div>`).join("")||"—"}</div><div><div class="small muted">Lankomumas</div>${at?(at.m==="pv"?"Pavėlavo":at.j?`Nedalyvavo (${esc(JUST_NAME[at.j])})`:"Nedalyvavo, nepateisinta"):"Dalyvavo"}</div>
-    ${nt.map(n=>`<div>${n.kind==="p"?"👍 Pagyrimas":"⚠️ Pastaba"}: ${esc(n.text)}</div>`).join("")}</div><div class="dlg-f"><button class="btn" data-act="close">Uždaryti</button></div>`);break;}
+    ${nt.map(n=>`<div>${NOTE_ICON[n.kind]||""} ${NOTE_NAME[n.kind]||""}: ${esc(n.text)}</div>`).join("")}</div><div class="dlg-f"><button class="btn" data-act="close">Uždaryti</button></div>`);break;}
 
   /* ---------- pranešimai, paskyra ---------- */
   case"newMsg":newMsgDlg();break;
@@ -194,8 +200,13 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
 
   /* ---------- mokytojas ---------- */
   case"addTt":{const t={id:uid(),g:S("g"),wd:+S("wd"),no:+S("no"),from:S("from"),weeks:S("valid")==="weeks"?+S("weeks")||1:null,parity:S("parity")};core.timetable.push(t);ttEditDlg();pendingRender=true;if(await DB.ins("timetable",R.tt(t)))toast("Pamoka pridėta į tvarkaraštį");break;}
-  case"saveLesson":{const gid=f.dataset.g,dt=f.dataset.d;const d=G(gid);ensureLesson(d,dt,gid);const l=d.lessons.find(x=>x.d===dt);l.topic=S("topic");l.t=S("t");l.cw=S("cw");l.hw=S("hw");
-    if(await DB.lesson(gid,l)){lessonDirty=false;render();toast("Pamoka išsaugota");}break;}
+  case"saveLesson":{const gid=f.dataset.g,dt=f.dataset.d;const d=G(gid);ensureLesson(d,dt,gid);const l=d.lessons.find(x=>x.d===dt);l.topic=S("topic");l.t=S("t");l.cw=S("cw");l.hw=S("hw");l.hwDue=S("hwDue");
+    if(l.hwDue&&l.hwDue<dt){toast("Atlikimo data negali būti ankstesnė už pamokos datą");return;}
+    if(await DB.lesson(gid,l)){lessonDirty=false;render();toast("Pamoka įrašyta");}break;}
+  case"saveNotes":{const gid=f.dataset.g,dt=f.dataset.d;const st=fd.getAll("st");const kind=S("kind")||"n";const text=S("text");
+    if(!st.length){toast("Pasirinkite bent vieną mokinį");return;}if(!text){toast("Įrašykite tekstą");return;}
+    await ensureLessonSaved(gid,dt);const d=G(gid);const rows=st.map(sid=>({id:uid(),s:sid,d:dt,kind,text,by:u.id}));d.notes.push(...rows);render();
+    if(await DB.ins("notes",rows.map(n=>R.note(gid,n))))toast(`Įrašyta mokiniams: ${rows.length}`);break;}
   case"saveGroup":{const students=fd.getAll("gs");const programs={};students.forEach(s=>{const p=S("gp_"+s);if(p)programs[s]=p;});
     const obj={name:S("name"),subjectId:S("subjectId"),kind:S("kind"),level:S("level"),hours:+S("hours")||1,students,programs,planId:S("planId")};
     let g;if(v){g=grp(v);Object.assign(g,obj);}else{g={id:uid(),teacherId:u.id,evalSys:"10",extra:{},...obj};core.groups.push(g);ui.gid=g.id;}
