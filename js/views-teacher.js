@@ -44,24 +44,24 @@ VIEWS.t_grid=u=>{
   const head=dates.map(dt=>{const l=d.lessons.find(x=>x.d===dt);const t=l&&l.t;const ro=!canEditDate(g,dt);return `<th class="d ${t==="KD"?"kd":""}" data-act="openLesson" data-g="${g.id}" data-d="${dt}" title="${esc(l&&l.topic||"Pamoka")}${t?" · "+esc(TYPE_NAME[t]):""}${l&&l.hw?" · ND: "+esc(l.hw):""}">${fmtD(dt)}<small>${t||(l&&l.hw?"ND":"&nbsp;")}</small></th>`;}).join("");
   const rows=sids.map(sid=>{const cells=dates.map(dt=>{const gg=d.grades.filter(x=>x.s===sid&&x.d===dt);const a=d.att.find(x=>x.s===sid&&x.d===dt);const nt=d.notes.filter(x=>x.s===sid&&x.d===dt);const ro=!canEditDate(g,dt);
       const at=a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}" title="${a.m==="pv"?"Pavėlavo":a.j?esc(JUST_NAME[a.j]):"Nepateisinta"}">${a.m==="pv"?"p":a.j||"n"}</span>`:"";
-      return `<td class="c ${ro?"ro":""}" data-act="${ro?"roCell":"cell"}" data-s="${sid}" data-d="${dt}"><div class="cellw">${gg.map(x=>chip(x)).join("")}${at}${nt.map(n=>`<span class="nt" title="${esc(n.text)}">${n.kind==="p"?"👍":"⚠️"}</span>`).join("")}</div></td>`;}).join("");
+      return `<td class="c ${ro?"ro":""}" data-act="${ro?"roCell":"cell"}" data-s="${sid}" data-d="${dt}"><div class="cellw">${gg.map(x=>chip(x)).join("")}${at}${nt.map(n=>`<span class="nt" title="${esc(n.text)}">${NOTE_ICON[n.kind]||""}</span>`).join("")}</div></td>`;}).join("");
     const gsP=sGrades(g.id,sid,pid);const av=isk?null:avgOf(gsP);
     return `<tr><td class="stu">${esc(uName(sid))}${progTag(g,sid)}</td>${cells}<td class="avg">${isk?`${gsP.filter(x=>x.v==="isk").length}/${gsP.length}`:fmtAvg(av)}</td></tr>`;}).join("");
   const p=core.settings.periods[pid];const own=g.teacherId===u.id;
   return `<h1>Žurnalas</h1><p class="lead">${esc(subjName(g.subjectId))} · ${KINDS[g.kind]} · ${EVAL_SYS[g.evalSys||"10"]}${own?"":` · vaduojate ${esc(uNameFL(g.teacherId))}`}. Paspaudę datą pereisite į tos pamokos pildymą, paspaudę langelį — pataisysite vieno mokinio įrašus. Užbrūkšniuoti langeliai — tik peržiūrai.</p>
   <div class="bar">${sel("gid",gOpts,ui.gid,"Grupė")}${sel("pid",pOpts,pid,"Laikotarpis")}<label class="field">Papildoma pamoka<input type="date" id="newLesson" value="${inPeriod(TODAY(),pid)?TODAY():p.from}" min="${p.from}" max="${p.to}"></label><button class="btn" data-act="addLesson">Pridėti</button></div>
   <div class="sheet scroll">${dates.length?`<table class="grid"><thead><tr><th class="stu">Mokinys</th>${head}<th class="avg">${isk?"Įsk.":"Vidurkis"}</th></tr></thead><tbody>${rows||`<tr><td class="stu muted" colspan="${dates.length+2}">Grupėje nėra mokinių</td></tr>`}</tbody></table>`:`<div class="empty">Šiame laikotarpyje pamokų nėra. Susidarykite tvarkaraštį arba pridėkite pamoką.</div>`}</div>
-  <p class="small muted" style="margin-top:10px">Vidurkis — paprastasis aritmetinis: visi pažymių tipai turi vienodą svorį, „neat.“ neįskaičiuojamas. 👍 — pagyrimas, ⚠️ — pastaba.</p>`;};
+  <p class="small muted" style="margin-top:10px">Vidurkis — paprastasis aritmetinis: visi pažymių tipai turi vienodą svorį, „neat.“ neįskaičiuojamas. 👍 — pagyrimas, ⚠️ — pastaba, 💬 — komentaras.</p>`;};
 function gradeOptions(g){const vals=(g.evalSys||"10")==="isk"?GRADE_VALUES.filter(v=>!/^\d+$/.test(v)):GRADE_VALUES;return vals.map(v=>[v,VLABEL[v]||v]);}
 function openCell(gid,sid,dt){const g=grp(gid),d=G(gid);const l=d.lessons.find(x=>x.d===dt);const gs=d.grades.filter(x=>x.s===sid&&x.d===dt);const a=d.att.find(x=>x.s===sid&&x.d===dt);const nt=d.notes.filter(x=>x.s===sid&&x.d===dt);
   const defT=l&&l.t&&TYPE_NAME[l.t]?l.t:"KL";
   openDlg(dlgHead(esc(uNameFL(sid)),`${esc(g.name)} · ${dt}${l&&l.topic?" · "+esc(l.topic):""}`)+`<div class="dlg-b">
-   ${gs.length||nt.length||a?`<div class="list">${a?`<div class="li"><span>Lankomumas: <b class="att ${a.m==="pv"?"pv":a.j?"j":""}">${a.m==="pv"?"p":a.j||"n"}</b> ${a.m==="pv"?"— pavėlavo":a.j?"— "+esc(JUST_NAME[a.j]):"— nedalyvavo"}</span><button class="x del" data-act="delAttCell" data-g="${gid}" data-s="${sid}" data-v="${dt}" title="Ištrinti lankomumo žymą" aria-label="Ištrinti lankomumo žymą">×</button></div>`:""}${gs.map(x=>`<div class="li"><span>${chip(x,false)} ${esc(TYPE_NAME[x.t])}${x.c?` <span class="muted">— ${esc(x.c)}</span>`:""}</span><button class="x" data-act="delGrade" data-g="${gid}" data-v="${x.id}" title="Ištrinti pažymį" aria-label="Ištrinti pažymį">×</button></div>`).join("")}${nt.map(n=>`<div class="li"><span>${n.kind==="p"?"👍 Pagyrimas":"⚠️ Pastaba"}: ${esc(n.text)}</span><button class="x" data-act="delNote" data-g="${gid}" data-v="${n.id}" aria-label="Ištrinti">×</button></div>`).join("")}</div>`:""}
+   ${gs.length||nt.length||a?`<div class="list">${a?`<div class="li"><span>Lankomumas: <b class="att ${a.m==="pv"?"pv":a.j?"j":""}">${a.m==="pv"?"p":a.j||"n"}</b> ${a.m==="pv"?"— pavėlavo":a.j?"— "+esc(JUST_NAME[a.j]):"— nedalyvavo"}</span><button class="x del" data-act="delAttCell" data-g="${gid}" data-s="${sid}" data-v="${dt}" title="Ištrinti lankomumo žymą" aria-label="Ištrinti lankomumo žymą">×</button></div>`:""}${gs.map(x=>`<div class="li"><span>${chip(x,false)} ${esc(TYPE_NAME[x.t])}${x.c?` <span class="muted">— ${esc(x.c)}</span>`:""}</span><button class="x" data-act="delGrade" data-g="${gid}" data-v="${x.id}" title="Ištrinti pažymį" aria-label="Ištrinti pažymį">×</button></div>`).join("")}${nt.map(n=>`<div class="li"><span>${NOTE_ICON[n.kind]||""} ${NOTE_NAME[n.kind]||""}: ${esc(n.text)}</span><button class="x" data-act="delNote" data-g="${gid}" data-v="${n.id}" aria-label="Ištrinti">×</button></div>`).join("")}</div>`:""}
    <div><div class="small muted" style="margin-bottom:6px">Naujas įvertinimas</div><div class="pick" id="pickV">${gradeOptions(g).map(([v,n])=>`<button type="button" data-act="pickV" data-v="${v}" aria-pressed="false" title="${esc(VTITLE[v]||"")}">${n}</button>`).join("")}</div></div>
    <div class="row"><label class="field">Tipas<select id="gType">${TYPES.map(([k,n])=>`<option value="${k}" ${k===defT?"selected":""}>${n}</option>`).join("")}</select></label><label class="field" style="flex:1">Komentaras<input id="gCom" placeholder="Nebūtina"></label></div>
    <div><div class="small muted" style="margin-bottom:6px">Lankomumas</div><div class="pick" id="pickA">${[["","Dalyvavo"],["n","n — nedalyvavo"],["pv","p — pavėlavo"]].map(([k,n])=>`<button type="button" style="padding:0 12px" data-act="pickA" data-v="${k}" aria-pressed="${(a?a.m:"")===k}">${n}</button>`).join("")}</div>
     ${a&&a.m==="n"?`<div class="small muted" style="margin-top:6px">${a.j?"Pateisinta: "+esc(JUST_NAME[a.j]):"Nepateisinta. Pateisina klasės vadovas."}</div>`:""}</div>
-   <div class="row"><label class="field">Pagyrimas / pastaba<select id="nKind"><option value="">—</option><option value="p">Pagyrimas</option><option value="n">Pastaba</option></select></label><label class="field" style="flex:1">Tekstas<input id="nText"></label></div></div>
+   <div class="row"><label class="field">Pagyrimas / pastaba<select id="nKind"><option value="">—</option><option value="n">Pastaba</option><option value="p">Pagyrimas</option><option value="k">Komentaras</option></select></label><label class="field" style="flex:1">Tekstas<input id="nText"></label></div></div>
    <div class="dlg-f"><button class="btn" data-act="close">Atšaukti</button><button class="btn pri" data-act="saveCell" data-g="${gid}" data-s="${sid}" data-d="${dt}">Išsaugoti</button></div>`);
   dlgState={v:null,a:a?a.m:""};}
 function preJust(sid,dt){const p=core.prejust.find(x=>x.s===sid&&dt>=x.from&&dt<=x.to);return p?p.j:null;}
@@ -79,8 +79,12 @@ async function saveCell(gid,sid,dt){const d=G(gid);const u=me();const ops=[];
 function lessonDefType(l){return l&&l.t&&TYPE_NAME[l.t]?l.t:"KL";}
 /* ---- Skiltis „Pamokos“: tema, klasės darbas, namų darbai ir pažymiai vienoje vietoje ---- */
 let ls={gid:null,dt:null,ro:true,types:{}};let lessonDirty=false;
-function openLesson(gid,dt){const g=grp(gid);ui.view="t_journal";ui.gid=gid;ui.pid=(periodsG(g).find(p=>dt>=p.from&&dt<=p.to)||{id:ui.pid}).id;ui.lesson=dt;lessonDirty=false;closeDlg();render();window.scrollTo(0,0);}
+function openLesson(gid,dt){const g=grp(gid);ui.view="t_journal";ui.ltab="pamoka";ui.gid=gid;ui.pid=(periodsG(g).find(p=>dt>=p.from&&dt<=p.to)||{id:ui.pid}).id;ui.lesson=dt;lessonDirty=false;closeDlg();render();window.scrollTo(0,0);}
 function lessonLabel(g,dt){const l=G(g.id).lessons.find(x=>x.d===dt);const no=(l&&l.no)||occDates(g.id,dt,dt).get(dt);return `${dt} ${WD[wdOf(dt)]}${no?`, ${no} pam.`:""}${l&&l.topic?` — ${l.topic}`:""}`;}
+const NOTE_KINDS=[["n","Pastaba"],["p","Pagyrimas"],["k","Komentaras"]];
+const NOTE_NAME=Object.fromEntries(NOTE_KINDS);
+const NOTE_ICON={p:"👍",n:"⚠️",k:"💬"};
+const LTABS=[["pamoka","Pamoka"],["ivert","Įvertinimai"],["pastabos","Pastabos / pagyrimai / komentarai"]];
 VIEWS.t_journal=u=>{
   const gs=teacherGroups(u.id);const gOpts=gs.map(g=>[g.id,gLabel(g)]);ensureIn("gid",gOpts);const g=grp(ui.gid);
   if(!g)return `<h1>Pamokos</h1><div class="sheet empty">Grupių dar nėra. <button class="btn" data-act="view" data-v="t_groups">Sukurti grupę</button></div>`;
@@ -92,24 +96,53 @@ VIEWS.t_journal=u=>{
     ${dates.length?`<div class="row" style="gap:4px"><button class="btn" data-act="lessonMove" data-v="-1" ${idx<=0?"disabled":""} aria-label="Ankstesnė pamoka">‹</button>${sel("lesson",dates.map(x=>[x,lessonLabel(g,x)]).reverse(),dt,"Pamoka",'style="max-width:340px"')}<button class="btn" data-act="lessonMove" data-v="1" ${idx>=dates.length-1?"disabled":""} aria-label="Kita pamoka">›</button></div>`:""}
     <label class="field">Nauja pamoka<input type="date" id="newLesson" value="${inPeriod(TODAY(),ui.pid)?TODAY():p.from}" min="${p.from}" max="${p.to}"></label><button class="btn" data-act="addLesson">Pridėti</button></div>`;
   if(!dt)return `<h1>Pamokos</h1>${bar}<div class="sheet empty">Šiame laikotarpyje pamokų nėra. Susidarykite tvarkaraštį arba pridėkite pamoką.</div>`;
-  const d=G(g.id);const l=d.lessons.find(x=>x.d===dt)||{d:dt,t:"",topic:"",cw:"",hw:""};const ro=!canEditDate(g,dt);const plan=core.plans.find(x=>x.id===g.planId);
+  const d=G(g.id);const l=d.lessons.find(x=>x.d===dt)||{d:dt,t:"",topic:"",cw:"",hw:"",hwDue:""};const ro=!canEditDate(g,dt);
   if(ls.gid!==g.id||ls.dt!==dt)ls={gid:g.id,dt,ro,types:{}};else ls.ro=ro;
-  const no=l.no||occDates(g.id,dt,dt).get(dt)||"";const cnt=d.grades.filter(x=>x.d===dt).length+d.att.filter(x=>x.d===dt).length;const dis=ro?"disabled":"";
-  return `<h1>Pamokos</h1><p class="lead">Pasirinkite pamoką, įrašykite temą, klasės darbą ir namų darbus, žemiau — pažymius ir lankomumą.</p>${bar}
-  <div class="sheet pad lesson-page">
-   <div class="lesson-h"><div><h2 style="margin:0">${esc(g.name)} · ${dt}</h2><div class="small muted">${WDL[wdOf(dt)]||""}${no?`, ${no} pamoka`:""}${g.teacherId!==u.id?` · vaduojate ${esc(uNameFL(g.teacherId))}`:""}${ro?" · tik peržiūra":""}</div></div>
-    ${ro?"":`<button type="button" class="btn warn sm" data-act="delLesson" data-g="${g.id}" data-v="${dt}" ${cnt?`disabled title="Pirma ištrinkite šios pamokos įrašus (${cnt})"`:""}>Ištrinti pamoką</button>`}</div>
-   <form data-form="saveLesson" data-g="${g.id}" data-d="${dt}" class="lesson-form">
-    <div class="row"><label class="field" style="flex:2">Tema<input name="topic" value="${esc(l.topic||"")}" list="planTopics" ${dis}></label><datalist id="planTopics">${plan?plan.topics.map(t=>`<option value="${esc(t)}">`).join(""):""}</datalist>
-    <label class="field">Pamokos tipas<select name="t" ${dis}><option value="">Įprasta pamoka</option>${WORK_TYPES.map(([k,n])=>`<option value="${k}" ${k===l.t?"selected":""}>${n}</option>`).join("")}</select></label></div>
-    <label class="field">Klasės darbas<textarea name="cw" rows="2" ${dis} placeholder="Kas buvo atlikta pamokoje">${esc(l.cw||"")}</textarea></label>
-    <label class="field">Namų darbai<textarea name="hw" rows="2" ${dis} placeholder="pvz., Vadovėlis p. 45, 3–7 užd.">${esc(l.hw||"")}</textarea></label>
-    ${ro?"":`<div><button class="btn pri">Išsaugoti pamoką</button> <span class="small muted" id="lessonDirtyNote"></span></div>`}
-   </form>
-   <div class="settype">Nustatyti įvertinimų tipą visai grupei:<select class="inp" id="allType" ${dis}>${TYPES.map(([k,n])=>`<option value="${k}" ${k===lessonDefType(l)?"selected":""}>${n}</option>`).join("")}</select><button type="button" class="btn sm" data-act="lgAllType" ${dis}>Keisti</button></div>
+  if(!LTABS.some(t=>t[0]===ui.ltab))ui.ltab="pamoka";
+  const no=l.no||occDates(g.id,dt,dt).get(dt)||"";const cnt=d.grades.filter(x=>x.d===dt).length+d.att.filter(x=>x.d===dt).length+d.notes.filter(x=>x.d===dt).length;
+  const nGr=d.grades.filter(x=>x.d===dt).length,nNt=d.notes.filter(x=>x.d===dt).length;
+  const info=`<div class="lesson-info">
+     <div><span class="muted small">Data</span><b>${dt}</b></div>
+     <div><span class="muted small">Diena</span><b>${WDL[wdOf(dt)]||"—"}</b></div>
+     <div><span class="muted small">Pamoka</span><b>${no?no+" pamoka":"—"}</b></div>
+     <div><span class="muted small">Grupė</span><b>${esc(g.name)}</b></div>
+     <div><span class="muted small">Dalykas</span><b>${esc(subjName(g.subjectId))}</b></div>
+     <div><span class="muted small">Mokytojas</span><b>${esc(uNameFL(g.teacherId))}</b>${g.teacherId!==u.id?'<span class="tag i">vaduojate</span>':""}</div>
+     <div><span class="muted small">Pamokos tipas</span><b class="${l.t==="KD"?"kdtxt":""}">${l.t?esc(TYPE_NAME[l.t]):"Įprasta pamoka"}</b></div>
+     <div><span class="muted small">Mokinių</span><b>${g.students.length}</b></div>
+     ${ro?'<div><span class="tag">tik peržiūra</span></div>':`<div class="li-act"><button type="button" class="btn warn sm" data-act="delLesson" data-g="${g.id}" data-v="${dt}" ${cnt?`disabled title="Pirma ištrinkite šios pamokos įrašus (${cnt})"`:""}>Ištrinti pamoką</button></div>`}
+   </div>`;
+  const tabs=`<div class="tabs ltabs" role="tablist">${LTABS.map(([k,n])=>`<button role="tab" aria-selected="${ui.ltab===k}" data-act="ltab" data-v="${k}">${n}${k==="ivert"&&nGr?` <span class="cnt">${nGr}</span>`:""}${k==="pastabos"&&nNt?` <span class="cnt">${nNt}</span>`:""}</button>`).join("")}</div>`;
+  let body="";
+  if(ui.ltab==="pamoka")body=lessonInfoForm(g,l,dt,ro);
+  else if(ui.ltab==="ivert")body=`<div class="settype">Nustatyti įvertinimų tipą visai grupei:<select class="inp" id="allType" ${ro?"disabled":""}>${TYPES.map(([k,n])=>`<option value="${k}" ${k===lessonDefType(l)?"selected":""}>${n}</option>`).join("")}</select><button type="button" class="btn sm" data-act="lgAllType" ${ro?"disabled":""}>Keisti</button></div>
    <div class="scroll" id="lsnRows">${lessonRows()}</div>
-   <p class="small muted" style="margin:10px 0 0">Pažymiai ir lankomumas išsaugomi iškart paspaudus. Pažymį ar lankomumo žymą ištrinsite paspaudę ×. n — nedalyvavo, p — pavėlavo.</p>
-  </div>`;};
+   <p class="small muted" style="margin:10px 0 0">Pažymiai ir lankomumas išsaugomi iškart paspaudus. Pažymį ar lankomumo žymą ištrinsite paspaudę ×. n — nedalyvavo, p — pavėlavo.</p>`;
+  else body=lessonNotes(g,dt,ro);
+  return `<h1>Pamokos</h1>${bar}<div class="sheet pad lesson-page">${info}${tabs}<div class="ltab-body">${body}</div></div>`;};
+
+function lessonInfoForm(g,l,dt,ro){const plan=core.plans.find(x=>x.id===g.planId);const dis=ro?"disabled":"";const cur=l.t||"";
+  return `<form data-form="saveLesson" data-g="${g.id}" data-d="${dt}" class="lesson-form">
+   <fieldset class="ltype"><legend>Pamokos tipas</legend>
+    ${[["","Įprasta pamoka"],...WORK_TYPES].map(([k,n])=>`<label class="ltype-opt ${k==="KD"?"kd":""}"><input type="radio" name="t" value="${k}" ${k===cur?"checked":""} ${dis}> ${n}</label>`).join("")}
+    <div class="small muted" style="flex-basis:100%">Pažymėjus atsiskaitomąjį darbą, mokiniai jį matys skiltyje „Atsiskaitomieji darbai“, o įvertinimų tipas bus parinktas automatiškai.</div>
+   </fieldset>
+   <label class="field">Tema<input name="topic" value="${esc(l.topic||"")}" list="planTopics" ${dis} placeholder="Pamokos tema"></label><datalist id="planTopics">${plan?plan.topics.map(t=>`<option value="${esc(t)}">`).join(""):""}</datalist>
+   <label class="field">Klasės darbas<textarea name="cw" rows="3" ${dis} placeholder="Kas buvo atlikta pamokoje">${esc(l.cw||"")}</textarea></label>
+   <label class="field">Namų darbai<textarea name="hw" rows="3" ${dis} placeholder="pvz., Vadovėlis p. 45, 3–7 užd.">${esc(l.hw||"")}</textarea></label>
+   <label class="field" style="max-width:220px">Namų darbus atlikti iki<input type="date" name="hwDue" value="${esc(l.hwDue||"")}" min="${dt}" ${dis}></label>
+   <p class="small muted" style="margin:0">Tema, klasės darbas ir namų darbai matomi mokiniams ir tėvams.</p>
+   ${ro?"":`<div><button class="btn pri">Įrašyti pamoką</button> <span class="small muted" id="lessonDirtyNote"></span></div>`}
+  </form>`;}
+
+function lessonNotes(g,dt,ro){const d=G(g.id);const list=d.notes.filter(x=>x.d===dt).sort((a,b)=>byName(a.s,b.s));const sids=[...g.students].sort(byName);const dis=ro?"disabled":"";
+  const form=ro?"":`<form data-form="saveNotes" data-g="${g.id}" data-d="${dt}" class="lesson-form">
+   <fieldset class="ltype"><legend>Įrašo tipas</legend>${NOTE_KINDS.map(([k,n],i)=>`<label class="ltype-opt"><input type="radio" name="kind" value="${k}" ${i===0?"checked":""}> ${NOTE_ICON[k]} ${n}</label>`).join("")}</fieldset>
+   <label class="field">Tekstas<textarea name="text" rows="3" required placeholder="pvz., Aktyviai dalyvavo pamokoje"></textarea></label>
+   <div><div class="row" style="justify-content:space-between;align-items:center"><b class="small">Mokiniai</b><span><button type="button" class="btn sm" data-act="ntAll" data-v="1">Pažymėti visus</button> <button type="button" class="btn sm" data-act="ntAll" data-v="0">Nuimti visus</button></span></div>
+    <div class="chk" style="margin-top:6px">${sids.map(sid=>`<label><input type="checkbox" name="st" value="${sid}">${esc(uName(sid))}</label>`).join("")||'<span class="muted small">Grupėje nėra mokinių</span>'}</div></div>
+   <div><button class="btn pri">Įrašyti</button></div></form>`;
+  return form+`<h3 class="sub-h">Šios pamokos įrašai</h3>${list.length?`<div class="sheet scroll"><table><thead><tr><th>Mokinys</th><th>Tipas</th><th>Tekstas</th><th></th></tr></thead><tbody>${list.map(x=>`<tr><td>${esc(uName(x.s))}</td><td style="white-space:nowrap">${NOTE_ICON[x.kind]||""} ${NOTE_NAME[x.kind]||""}</td><td>${esc(x.text)}</td><td>${ro?"":`<button class="x del" data-act="delNoteL" data-g="${g.id}" data-v="${x.id}" title="Ištrinti įrašą" aria-label="Ištrinti įrašą">×</button>`}</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted small">Įrašų dar nėra.</p>'}`;}
 function lessonRows(){const{gid,dt,ro}=ls;const g=grp(gid),d=G(gid);const l=d.lessons.find(x=>x.d===dt);const opts=gradeOptions(g);const dis=ro?"disabled":"";
   const rows=[...g.students].sort(byName).map((sid,i)=>{const s=U(sid)||{first:"",last:"(pašalintas)"};const gs=d.grades.filter(x=>x.s===sid&&x.d===dt);const cur=gs[gs.length-1];const a=d.att.find(x=>x.s===sid&&x.d===dt);
     const type=ls.types[sid]||(cur&&cur.t)||lessonDefType(l);
