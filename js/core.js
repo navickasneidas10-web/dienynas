@@ -27,7 +27,7 @@ let ready=false, dialogOpen=false, pendingRender=false;
 let session=null;      // prisijungusio asmens (people.id) identifikatorius
 let authUser=null;     // Supabase Auth naudotojas
 let mfa={enabled:false,factorId:null};
-const ui={view:null,gid:null,pid:null,lpid:null,cls:null,sid:null,month:null,week:null,child:null,stPid:null,tab:null,repCls:null,repPid:null,rep:"keys",msgTab:"in",ttTeacher:null,evalCls:null,subTab:"t"};
+const ui={dMonth:null,dTab:"days",lMonth:null,stPer:null,ltab:"pamoka",view:null,gid:null,pid:null,lpid:null,cls:null,sid:null,month:null,week:null,child:null,stPid:null,tab:null,repCls:null,repPid:null,rep:"keys",msgTab:"in",ttTeacher:null,evalCls:null,subTab:"t"};
 const authUi={tab:"login",step:"cred",err:"",keyInfo:null,info:"",busy:false,needsSetup:false};
 
 const $=s=>document.querySelector(s);
