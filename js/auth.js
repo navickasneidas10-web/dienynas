@@ -68,7 +68,7 @@ function menuFor(u){
   if(u.role==="teacher"){const m=[["Mano dienynas",[["t_tt","Tvarkaraštis"],["t_journal","Pamokos"],["t_grid","Žurnalas"],["t_groups","Grupės"],["t_plans","Pamokų teminiai planai"],["t_works","Atsiskaitomieji darbai"],["t_soc","Socialinė-pilietinė veikla"],["t_subs","Pavadavimai"]]],["Ataskaitinės veiklos",[["t_periods","Trimestrai / pusmečiai"]]]];
     if(headClassesOf(u.id).length)m.push(["Klasės vadovui",[["h_just","N pateisinimas"],["h_summary","Klasės suvestinė"],["h_keys","Tėvų raktai"],["h_soc","Soc.-pilietinės veiklos ataskaita"]]]);
     m.push(["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]);return m;}
-  const base=[["s_grades","Pažymiai"],["s_tt","Tvarkaraštis"],["s_att","Lankomumas"],["s_works","Atsiskaitymai"],["s_notes","Pagyrimai / pastabos"],["s_soc","Soc.-pilietinė veikla"]];
+  const base=[["s_diary","Dienynas"],["s_tt","Tvarkaraštis"],["s_lessons","Pamokos"],["s_hw","Namų darbai"],["s_works","Atsiskaitomieji darbai"],["s_att","Lankomumas"],["s_notes","Pagyrimai / pastabos"],["s_periods","Trimestrai / pusmečiai"],["s_soc","Socialinė-pilietinė veikla"]];
   if(u.role==="parent")return[["Vaiko dienynas",base],["Tėvams",[["p_child","Vaiko duomenys"],["p_add","Pridėti vaiką"]]],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
   return[["Mano dienynas",base],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
 }
