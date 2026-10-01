@@ -219,3 +219,43 @@ dialog::backdrop{background:rgba(16,22,42,.45)}
 .lesson-h{display:flex;justify-content:space-between;align-items:start;gap:10px;flex-wrap:wrap}
 .lesson-form{display:flex;flex-direction:column;gap:10px}
 .lesson-form textarea{min-height:56px}
+
+/* ---- Pamokos pildymas: informacija + sekcijos ---- */
+.lesson-info{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 18px;padding:12px 14px;background:var(--blue-bg);border-radius:var(--r)}
+.lesson-info>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.lesson-info b{font-size:14.5px;overflow-wrap:anywhere}
+.lesson-info .li-act{justify-content:center;align-items:flex-start}
+.ltabs{margin:4px 0 0}
+.ltabs .cnt{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--line);font-size:11.5px;text-align:center}
+.ltab-body{display:flex;flex-direction:column;gap:12px}
+.ltype{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px 12px;margin:0;display:flex;flex-wrap:wrap;gap:6px 18px}
+.ltype legend{font-size:12.5px;color:var(--ink-2);padding:0 4px}
+.ltype-opt{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}
+.ltype-opt.kd{color:var(--pen);font-weight:600}
+.kdtxt{color:var(--pen);font-weight:700}
+.sub-h{font-size:15px;margin:8px 0 0}
+
+/* ---- Mokinio dienynas (TAMO stilius) ---- */
+.mtabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 14px}
+.mtabs button{border:0;background:none;padding:6px 8px;font-weight:600;color:var(--focus);cursor:pointer;border-bottom:2px solid transparent;font-size:14px}
+.mtabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.dtabs button[aria-selected="true"]{background:var(--ink);color:var(--paper);border-bottom-color:var(--ink);border-radius:4px 4px 0 0}
+.diary{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.dday{display:grid;grid-template-columns:90px 1fr;border-bottom:1px solid var(--line)}
+.dday:last-child{border-bottom:0}
+.dday-h{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px 6px;color:var(--ink-2)}
+.dday-h b{font-size:22px;font-weight:500;line-height:1}
+.dday-h span{font-size:13px;margin-top:2px}
+.drow{display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;padding:12px 14px 12px 0;border-bottom:1px solid var(--line-2)}
+.drow:last-child{border-bottom:0}
+.drow.lrow{grid-template-columns:1fr}
+.dval{text-align:center}
+.dval .g{font-size:22px}
+.dtxt b{font-size:15px}
+.dtxt>div{font-size:13.5px;margin-top:2px}
+.dtime{font-size:12.5px;color:var(--ink-2);text-align:right;line-height:1.5;white-space:nowrap}
+.dgrades{display:flex;flex-wrap:wrap;gap:4px 12px}
+.dg{display:inline-flex;flex-direction:column;align-items:center;line-height:1.15}
+.dg small{font-size:10.5px;color:var(--muted);font-weight:500}
+b.big .g,.big .g{font-size:17px}
+@media (max-width:600px){.dday{grid-template-columns:56px 1fr}.drow{grid-template-columns:44px 1fr auto;gap:8px}.dval .g{font-size:18px}}
