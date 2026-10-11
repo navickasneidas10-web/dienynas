@@ -39,7 +39,7 @@ async function loadAll() {
   const D = Object.fromEntries(TABLES.map((t, i) => [t, res[i]]));
   const c = emptyCore();
   if (D.settings[0]) c.settings = mapSettings(D.settings[0]);
-  c.classes = D.classes.map(x => ({ id: x.id, name: x.name, level: x.level, system: x.system, headTeacherId: x.head_teacher_id || "" }));
+  c.classes = D.classes.map(x => ({ id: x.id, name: x.name, level: x.level, system: x.system, headTeacherId: x.head_teacher_id || "", socialPlan: x.social_plan == null ? null : Number(x.social_plan) }));
   c.subjects = D.subjects.map(x => ({ id: x.id, name: x.name, kind: x.kind, parentId: x.parent_id || "", code: x.code || "" }));
   c.plans = D.plans.map(x => ({ id: x.id, ownerId: x.owner_id, name: x.name, desc: x.descr || "", subjectId: x.subject_id || "", topics: x.topics || [] }));
   c.groups = D.groups.map(x => ({ id: x.id, name: x.name, subjectId: x.subject_id, teacherId: x.teacher_id, kind: x.kind, level: x.level || "", hours: x.hours,
@@ -73,7 +73,8 @@ async function loadAll() {
   const rec = {};
   D.message_recipients.forEach(r => { (rec[r.message_id] ??= []).push(r); });
   const ms = { list: D.messages.map(m => ({ id: m.id, from: m.from_id, subj: m.subject, body: m.body, at: m.created_at,
-    to: (rec[m.id] || []).map(r => r.recipient_id), read: Object.fromEntries((rec[m.id] || []).filter(r => r.read_at).map(r => [r.recipient_id, true])) })) };
+    to: (rec[m.id] || []).map(r => r.recipient_id), read: Object.fromEntries((rec[m.id] || []).filter(r => r.read_at).map(r => [r.recipient_id, true])),
+    deleted: Object.fromEntries((rec[m.id] || []).filter(r => r.deleted_at).map(r => [r.recipient_id, true])) })) };
 
   core = c; users = u; gd = g; social = soc; msgs = ms; _hol = null;
   const mine = Object.values(u).find(p => authUser && p.userId === authUser.id);
@@ -92,7 +93,7 @@ async function W(promise, quiet) {
   return data ?? true;
 }
 const R = {
-  cls: c => ({ id: c.id, name: c.name, level: c.level, system: c.system, head_teacher_id: c.headTeacherId || null }),
+  cls: c => ({ id: c.id, name: c.name, level: c.level, system: c.system, head_teacher_id: c.headTeacherId || null, social_plan: c.socialPlan == null ? null : c.socialPlan }),
   subject: s => ({ id: s.id, name: s.name, kind: s.kind, parent_id: s.parentId || null, code: s.code || null }),
   person: p => ({ id: p.id, role: p.role, first_name: p.first, last_name: p.last, class_id: p.classId || null, email: p.email || null, birth: p.birth || null }),
   group: g => ({ id: g.id, name: g.name, subject_id: g.subjectId, teacher_id: g.teacherId, kind: g.kind, level: g.level || null, hours: g.hours,
