@@ -262,8 +262,7 @@ b.big .g,.big .g{font-size:17px}
 
 /* ---- Įvertinimų lentelė: lankomumas pažymio stulpelyje, šiukšliadėžė šone ---- */
 .gcell{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 6px;min-width:80px}
-.gcell .gvs .g{font-family:inherit;font-size:14.7px;font-weight:700;line-height:1.5;padding:1px 4px}
-.gatt{font-family:inherit;font-size:14.7px;font-weight:700;line-height:1.5;color:var(--ink);margin-left:auto;padding:1px 4px}
+.gatt{display:inline;padding:0 2px;font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;margin-left:auto}
 .gpick{display:flex;align-items:center;gap:10px}
 .trash-slot{display:inline-flex;width:22px;justify-content:center;flex:none}
 .trash{border:0;background:none;padding:2px;color:var(--muted);cursor:pointer;line-height:0;border-radius:3px}
