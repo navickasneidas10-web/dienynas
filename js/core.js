@@ -1,7 +1,7 @@
 /* Dienynas — konstantos, būsena ir skaičiavimai */
 /* ================= Konstantos ================= */
 /* Pažymių tipai (kodai suderinami su jau įrašytais pažymiais) */
-const TYPES=[["PR","Praktinis darbas"],["KL","Klasės darbas"],["KD","Kontrolinis darbas"],["PP","Paprastas darbas"],["SD","Savarankiškas darbas"],["ND","Namų darbas"],["TD","Teorinis darbas"],["TA","Testas"],["KP","Kaupiamasis"],["KM","Iš kitų įstaigų"],["PJ","Projektas"],["RS","Rašinys"]];
+const TYPES=[["PR","Praktinis darbas"],["KL","Klasės darbas"],["KD","Kontrolinis darbas"],["PP","Paprastas"],["SD","Savarankiškas darbas"],["ND","Namų darbas"],["TD","Teorinis darbas"],["TA","Testas"],["KP","Kaupiamasis"],["KM","Pažymys iš kitų įstaigos"],["PJ","Projektinis darbas"],["RS","Rašinys"]];
 const TYPE_NAME=Object.fromEntries(TYPES);
 const WORK_TYPES=TYPES.filter(([k])=>["KD","SD","PR","TD","TA","PJ","RS"].includes(k));
 const JUST=[["nt","Pateisinta tėvų (dėl ligos)"],["np","Pateisinta (kita priežastis)"],["nl","Pateisinta (dėl ligos)"],["nk","Pateisinta tėvų (ne dėl ligos)"],["ns","Pateisinta (direktoriaus įsakymu)"],["nv","Pateisinta (varžybos, olimpiados)"]];
