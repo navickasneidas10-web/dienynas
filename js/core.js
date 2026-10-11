@@ -1,8 +1,9 @@
 /* Dienynas — konstantos, būsena ir skaičiavimai */
 /* ================= Konstantos ================= */
-const TYPES=[["KD","Kontrolinis darbas"],["SD","Savarankiškas darbas"],["KL","Klasės darbas"],["ND","Namų darbai"],["PR","Praktinis / laboratorinis darbas"],["PJ","Projektinis darbas"],["TA","Testas / apklausa"],["KM","Pažymys iš kitos mokyklos"]];
+/* Pažymių tipai (kodai suderinami su jau įrašytais pažymiais) */
+const TYPES=[["PR","Praktinis darbas"],["KL","Klasės darbas"],["KD","Kontrolinis darbas"],["PP","Paprastas darbas"],["SD","Savarankiškas darbas"],["ND","Namų darbas"],["TD","Teorinis darbas"],["TA","Testas"],["KP","Kaupiamasis"],["KM","Iš kitų įstaigų"],["PJ","Projektas"],["RS","Rašinys"]];
 const TYPE_NAME=Object.fromEntries(TYPES);
-const WORK_TYPES=TYPES.filter(([k])=>["KD","SD","PR","PJ","TA"].includes(k));
+const WORK_TYPES=TYPES.filter(([k])=>["KD","SD","PR","TD","TA","PJ","RS"].includes(k));
 const JUST=[["nt","Pateisinta tėvų (dėl ligos)"],["np","Pateisinta (kita priežastis)"],["nl","Pateisinta (dėl ligos)"],["nk","Pateisinta tėvų (ne dėl ligos)"],["ns","Pateisinta (direktoriaus įsakymu)"],["nv","Pateisinta (varžybos, olimpiados)"]];
 const JUST_NAME=Object.fromEntries(JUST);
 const KINDS={klase:"Mokomojo dalyko grupė",pogrupis:"Pogrupis (mobilioji grupė)",srautas:"Srautas"};
@@ -27,7 +28,7 @@ let ready=false, dialogOpen=false, pendingRender=false;
 let session=null;      // prisijungusio asmens (people.id) identifikatorius
 let authUser=null;     // Supabase Auth naudotojas
 let mfa={enabled:false,factorId:null};
-const ui={dMonth:null,dTab:"days",lMonth:null,stPer:null,ltab:"pamoka",view:null,gid:null,pid:null,lpid:null,cls:null,sid:null,month:null,week:null,child:null,stPid:null,tab:null,repCls:null,repPid:null,rep:"keys",msgTab:"in",ttTeacher:null,evalCls:null,subTab:"t"};
+const ui={repStuCls:null,repStu:null,dMonth:null,dTab:"days",lMonth:null,stPer:null,ltab:"pamoka",view:null,gid:null,pid:null,lpid:null,cls:null,sid:null,month:null,week:null,child:null,stPid:null,tab:null,repCls:null,repPid:null,rep:"keys",msgTab:"in",ttTeacher:null,evalCls:null,subTab:"t"};
 const authUi={tab:"login",step:"cred",err:"",keyInfo:null,info:"",busy:false,needsSetup:false};
 
 const $=s=>document.querySelector(s);
@@ -117,3 +118,12 @@ function genKey(first,last,letter){const f=(fold(first)+"xxxx").slice(0,4),l=(fo
 function pwProblem(pw){if(pw.length<8)return"Slaptažodis turi būti bent 8 simbolių.";if(!/[A-Za-zĄČĘĖĮŠŲŪŽąčęėįšųūž]/.test(pw)||!/\d/.test(pw))return"Slaptažodyje turi būti ir raidžių, ir skaičių.";return null;}
 const loginEmail=l=>{l=String(l).trim().toLowerCase();return l.includes("@")?l:`${l}@${CONFIG.LOGIN_EMAIL_DOMAIN}`;};
 const parseV=v=>/^\d+$/.test(v)?+v:v;
+
+const TRASH_SVG=`<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6 1.5h4l.5 1H14v1.5H2V2.5h3.5zM3.2 5h9.6l-.7 9.1c-.05.5-.47.9-.98.9H4.88c-.51 0-.93-.4-.98-.9zm2.6 1.6v6.6h1.1V6.6zm3.3 0v6.6h1.1V6.6z"/></svg>`;
+
+/* Socialinė-pilietinė veikla: atlikta / planas */
+const socDone=sid=>social.list.reduce((t,x)=>t+(x.hours[sid]||0),0);
+const socPlan=sid=>{const c=cls((U(sid)||{}).classId);return c&&c.socialPlan!=null?c.socialPlan:null;};
+const fmtH=h=>String(Math.round(h*10)/10).replace(".",",");
+function socProgress(sid){const d=socDone(sid),p=socPlan(sid);if(p==null)return `<b>${fmtH(d)}</b> val.`;const pct=Math.min(100,p?d/p*100:100);
+  return `<span class="socp"><b>${fmtH(d)} / ${fmtH(p)}</b> val.<span class="socbar" role="img" aria-label="Atlikta ${fmtH(d)} iš ${fmtH(p)} valandų"><i style="width:${pct}%"></i></span>${d>=p?'<span class="tag ok">Įvykdyta</span>':`<span class="small muted">liko ${fmtH(p-d)}</span>`}</span>`;}
