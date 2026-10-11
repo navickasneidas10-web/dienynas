@@ -10,17 +10,19 @@ VIEWS.a_home=u=>{
   ${!core.subjects.length||!core.classes.length?`<div class="note info" style="margin-top:14px">Pradėkite nuo <a href="#" data-act="view" data-v="a_subjects">dalykų</a>, <a href="#" data-act="view" data-v="a_classes">klasių</a> ir <a href="#" data-act="view" data-v="a_teachers">mokytojų</a>.</div>`:""}`;
 };
 VIEWS.a_classes=()=>{
-  const rows=[...core.classes].sort((a,b)=>lsort(a.name,b.name)).map(c=>`<tr><td><b>${esc(c.name)}</b></td><td class="num">${c.level}</td><td>${c.system==="trim"?"Trimestrai":"Pusmečiai"}</td><td>${c.headTeacherId?esc(uNameFL(c.headTeacherId)):'<span class="muted">—</span>'}</td><td class="num">${classStudents(c.id).length}</td>
+  const rows=[...core.classes].sort((a,b)=>lsort(a.name,b.name)).map(c=>`<tr><td><b>${esc(c.name)}</b></td><td class="num">${c.level}</td><td>${c.system==="trim"?"Trimestrai":"Pusmečiai"}</td><td>${c.headTeacherId?esc(uNameFL(c.headTeacherId)):'<span class="muted">—</span>'}</td><td class="num">${classStudents(c.id).length}</td><td class="num">${c.socialPlan!=null?fmtH(c.socialPlan)+" val.":'<span class="muted">—</span>'}</td>
    <td style="white-space:nowrap"><button class="btn sm" data-act="classDlg" data-v="${c.id}">Redaguoti</button> <button class="btn sm warn" data-act="delClass" data-v="${c.id}" title="Pašalinti galima tik tuščią klasę">Šalinti</button></td></tr>`).join("");
   return `<h1>Klasės</h1><p class="lead">Klasei nurodomas mokymo lygis, laikotarpių sistema (pusmečiai ar trimestrai) ir klasės vadovas. Mokiniai į klasę pridedami skiltyje „Mokiniai“. Šalinti galima tik klasę be mokinių.</p>
   <div class="bar"><button class="btn pri" data-act="classDlg" data-v="">Sukurti klasę</button></div>
-  <div class="sheet scroll">${rows?`<table><thead><tr><th>Klasė</th><th class="num">Lygis</th><th>Periodai</th><th>Klasės vadovas</th><th class="num">Mokinių</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty">Klasių dar nėra.</div>`}</div>`;
+  <div class="sheet scroll">${rows?`<table><thead><tr><th>Klasė</th><th class="num">Lygis</th><th>Periodai</th><th>Klasės vadovas</th><th class="num">Mokinių</th><th class="num">Soc. veiklos planas</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty">Klasių dar nėra.</div>`}</div>`;
 };
-function classDlg(id){const c=id?cls(id):{name:"",level:5,system:core.settings.system,headTeacherId:""};
+function classDlg(id){const c=id?cls(id):{name:"",level:5,system:core.settings.system,headTeacherId:"",socialPlan:null};
   openDlg(dlgHead(id?"Redaguoti klasę":"Sukurti klasę")+`<form data-form="saveClass" data-v="${id||""}"><div class="dlg-b"><div class="row"><label class="field" style="flex:1">Pavadinimas<input name="name" required value="${esc(c.name)}" placeholder="8A"></label>
    <label class="field">Mokymo lygis<select name="level">${[1,2,3,4,5,6,7,8,9,10,11,12].map(l=>`<option ${+c.level===l?"selected":""}>${l}</option>`).join("")}</select></label></div>
    <label class="field">Laikotarpiai<select name="system"><option value="pusm" ${c.system!=="trim"?"selected":""}>Pusmečiai</option><option value="trim" ${c.system==="trim"?"selected":""}>Trimestrai</option></select></label>
-   <label class="field">Klasės vadovas<select name="head"><option value="">—</option>${teachers().map(t=>`<option value="${t.id}" ${t.id===c.headTeacherId?"selected":""}>${esc(t.last)} ${esc(t.first)}</option>`).join("")}</select></label></div>
+   <label class="field">Klasės vadovas<select name="head"><option value="">—</option>${teachers().map(t=>`<option value="${t.id}" ${t.id===c.headTeacherId?"selected":""}>${esc(t.last)} ${esc(t.first)}</option>`).join("")}</select></label>
+   <label class="field">Socialinės-pilietinės veiklos planas per metus (val.)<input type="number" name="socialPlan" min="0" step="0.5" value="${c.socialPlan??""}" placeholder="pvz., 10" style="max-width:160px"></label>
+   <div class="small muted">Mokiniai ir tėvai matys, kiek valandų atlikta iš plano. Palikite tuščią, jei planas netaikomas.</div></div>
    <div class="dlg-f"><button type="button" class="btn" data-act="close">Atšaukti</button><button class="btn pri">Išsaugoti</button></div></form>`);}
 
 VIEWS.a_students=()=>{
@@ -144,3 +146,16 @@ VIEWS.a_users=()=>{const roles=[["*","Visi"],["admin","Administratoriai"],["teac
 VIEWS.a_data=()=>`<h1>Duomenys</h1><p class="lead">Duomenys saugomi jūsų Supabase projekte. Prieigą prie kiekvieno įrašo riboja duomenų bazės taisyklės (Row Level Security): mokinys mato tik savo, tėvai — savo vaikų, mokytojas — savo grupių duomenis.</p>
   <div class="row"><button class="btn" data-act="exportAll">Atsarginė kopija (JSON)</button><button class="btn warn" data-act="wipe">Ištrinti visus duomenis</button></div>
   <p class="small muted">„Ištrinti visus duomenis“ pašalina klases, mokinius, mokytojus, grupes ir visus įrašus — lieka tik jūsų administratoriaus paskyra. Ištrintų asmenų prisijungimo paskyros lieka Supabase → Authentication sąraše — jas galima pašalinti ten.</p>`;
+
+/* ---- Mokinio asmeninė mokymosi ataskaita (administratorius ir klasės vadovas) ---- */
+function studentReportView(classList,title,backLead){
+  const cOpts=classList.sort((a,b)=>lsort(a.name,b.name)).map(c=>[c.id,c.name]);ensureIn("repStuCls",cOpts);
+  if(!ui.repStuCls)return `<h1>${title}</h1><div class="sheet empty">Klasių nėra.</div>`;
+  const ss=classStudents(ui.repStuCls);const sOpts=ss.map(s=>[s.id,`${s.last} ${s.first}`]);ensureIn("repStu",sOpts);
+  const idx=ss.findIndex(s=>s.id===ui.repStu);
+  const bar=`<div class="bar noprint">${sel("repStuCls",cOpts,ui.repStuCls,"Klasė")}${ss.length?`<div class="row" style="gap:4px"><button class="btn" data-act="repStuMove" data-v="-1" ${idx<=0?"disabled":""} aria-label="Ankstesnis mokinys">‹</button>${sel("repStu",sOpts,ui.repStu,"Mokinys")}<button class="btn" data-act="repStuMove" data-v="1" ${idx>=ss.length-1?"disabled":""} aria-label="Kitas mokinys">›</button></div><button class="btn" data-act="print">Spausdinti</button>`:""}</div>`;
+  if(!ui.repStu)return `<h1>${title}</h1><p class="lead">${backLead}</p>${bar}<div class="sheet empty">Klasėje nėra mokinių.</div>`;
+  const s=U(ui.repStu);
+  return periodsReport(ui.repStu,`<h1>${title}</h1><p class="lead">${backLead}</p>${bar}<div class="rep-who"><b>${esc(s.last)} ${esc(s.first)}</b> · ${esc(clsName(s.classId))} klasė · soc.-pilietinė veikla: ${socProgress(s.id)}</div>`);}
+VIEWS.a_studrep=()=>studentReportView([...core.classes],"Mokinio mokymosi ataskaita","Tokia pati ataskaita, kokią mokinys ir tėvai mato skiltyje „Trimestrai / pusmečiai“: pasirinkto laikotarpio pažymiai, vidurkiai ir išvesti įvertinimai.");
+VIEWS.h_studrep=u=>studentReportView(headClassesOf(u.id),"Mokinio mokymosi ataskaita","Jūsų auklėtinių asmeninės ataskaitos — tai, ką mokinys ir tėvai mato skiltyje „Trimestrai / pusmečiai“.");
