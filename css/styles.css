@@ -259,3 +259,33 @@ dialog::backdrop{background:rgba(16,22,42,.45)}
 .dg small{font-size:10.5px;color:var(--muted);font-weight:500}
 b.big .g,.big .g{font-size:17px}
 @media (max-width:600px){.dday{grid-template-columns:56px 1fr}.drow{grid-template-columns:44px 1fr auto;gap:8px}.dval .g{font-size:18px}}
+
+/* ---- Įvertinimų lentelė: lankomumas pažymio stulpelyje, šiukšliadėžė šone ---- */
+.gcell{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 6px;min-width:80px}
+.gcell .gvs .g{font-size:16px;font-weight:500}
+.gatt{font-size:16px;color:var(--ink);margin-left:auto}
+.gpick{display:flex;align-items:center;gap:10px}
+.trash-slot{display:inline-flex;width:22px;justify-content:center;flex:none}
+.trash{border:0;background:none;padding:2px;color:var(--muted);cursor:pointer;line-height:0;border-radius:3px}
+.trash:hover,.trash:focus-visible{color:var(--pen)}
+
+/* ---- Gavėjų grupės ---- */
+.rgroups{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:46vh;overflow:auto}
+.rgroup{border:1px solid var(--line);border-radius:var(--r)}
+.rgroup summary{padding:8px 12px;cursor:pointer;font-weight:600;display:flex;gap:6px;align-items:center;list-style:none}
+.rgroup summary::-webkit-details-marker{display:none}
+.rgroup summary::before{content:"▸";color:var(--muted);width:12px}
+.rgroup[open] summary::before{content:"▾"}
+.rgroup summary label{display:inline-flex;gap:6px;align-items:center}
+.rlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:2px 14px;padding:4px 12px 10px 30px}
+.ritem{display:flex;gap:6px;align-items:flex-start;font-size:14px;padding:3px 0}
+.ritem[hidden]{display:none}
+/* ---- Soc. veiklos progresas ---- */
+.socp{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
+.socbar{display:inline-block;width:140px;height:8px;border-radius:4px;background:var(--line);overflow:hidden;vertical-align:middle}
+.socbar i{display:block;height:100%;background:var(--leaf);border-radius:4px}
+.socbig{font-size:18px;margin-top:4px}
+.socbig .socbar{width:220px;height:10px}
+
+.rep-who{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:0 0 12px;font-size:15px}
+@media print{.tabs button:not([aria-selected="true"]){display:none}.rep-who{margin-top:0}}
