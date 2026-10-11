@@ -1,10 +1,14 @@
 /* Dienynas — naudotojo veiksmų apdorojimas (paspaudimai, formos) */
 $("#dlg").addEventListener("close",()=>{dialogOpen=false;if(pendingRender)render();});
 $("#dlg").addEventListener("click",e=>{if(e.target.id==="dlg")closeDlg();});
-const UIKEYS=["lesson","gid","pid","lpid","cls","sid","month","stPid","tab","repCls","repPid","ttTeacher","evalCls","child"];
+const UIKEYS=["repStuCls","repStu","lesson","gid","pid","lpid","cls","sid","month","stPid","tab","repCls","repPid","ttTeacher","evalCls","child"];
 
-document.addEventListener("change",e=>{const el=e.target.closest("[data-ch]");if(!el)return;const k=el.dataset.ch,v=el.value;
+document.addEventListener("change",e=>{
+  if(e.target.dataset&&e.target.dataset.grp){const g=e.target;$$(`input[name=to][data-role="${g.dataset.grp}"]`).forEach(c=>{if(!c.closest(".ritem").hidden)c.checked=g.checked;});msgCountUpd();return;}
+  if(e.target.name==="to"&&e.target.closest('form[data-form="sendMsg"]')){msgCountUpd();return;}
+  const el=e.target.closest("[data-ch]");if(!el)return;const k=el.dataset.ch,v=el.value;
   if(UIKEYS.includes(k)){if(lessonDirty&&ui.view==="t_journal"&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?")){render();return;}lessonDirty=false;ui[k]=v;if(k==="gid"&&ui.view==="t_periods")ui.tab=null;render();return;}
+  if(k==="socCls"){const box=$("#socStudents");if(box)box.innerHTML=socStudentList(v);return;}
   if(k==="week"){if(v)ui.week=v;render();return;}
   if(k==="rowType"){const{gid,dt}=ls;const sid=el.dataset.s;ls.types[sid]=v;const ids=[];G(gid).grades.forEach(x=>{if(x.s===sid&&x.d===dt&&x.t!==v){x.t=v;ids.push(x.id);}});
     refreshLessonRows();if(ids.length)Promise.all(ids.map(id=>DB.upd("grades",{type:v},{id})));return;}
@@ -62,6 +66,7 @@ document.addEventListener("click",async e=>{
   case"mtab":ui[el.dataset.k]=v;render();break;
   case"dTab":ui.dTab=v;render();break;
   case"stPer":ui.stPer=v;render();break;
+  case"repStuMove":{const ss=classStudents(ui.repStuCls);const i=ss.findIndex(s=>s.id===ui.repStu)+ +v;if(ss[i]){ui.repStu=ss[i].id;render();}break;}
   case"ltab":if(lessonDirty&&v!=="pamoka"&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?"))return;if(v!=="pamoka")lessonDirty=false;ui.ltab=v;render();break;
   case"ntAll":$$('form[data-form="saveNotes"] input[name=st]').forEach(c=>c.checked=v==="1");break;
   case"delNoteL":{const d=G(el.dataset.g);d.notes=d.notes.filter(y=>y.id!==v);render();if(await DB.del("notes",{id:v}))toast("Įrašas ištrintas");break;}
@@ -106,8 +111,9 @@ document.addEventListener("click",async e=>{
       if(await DB.ins("works",R.work(w))&&await DB.lesson(gid,l))toast("Atsiskaitomasis darbas išsaugotas");}break;}
   case"delWork":core.works=core.works.filter(w=>w.id!==v);render();await DB.del("works",{id:v});break;
   case"socDlg":socDlg();break;
+  case"socAll":$$('#socStudents input[name=st]').forEach(c=>c.checked=v==="1");break;
   case"delSoc":social.list=social.list.filter(x=>x.id!==v);render();await DB.del("social",{id:v});break;
-  case"socStudent":{const list=social.list.filter(x=>x.hours[v]);openDlg(dlgHead(esc(uNameFL(v)),"Socialinė-pilietinė veikla")+`<div class="dlg-b"><div class="list">${list.map(x=>`<div class="li"><span>${x.d} · ${esc(x.type)}: ${esc(x.activity)}</span><b>${x.hours[v]} val.</b></div>`).join("")||"Veiklų nėra."}</div></div><div class="dlg-f"><button class="btn" data-act="close">Uždaryti</button></div>`);break;}
+  case"socStudent":{const list=social.list.filter(x=>x.hours[v]).sort((a,b)=>lsort(b.d,a.d));openDlg(dlgHead(esc(uNameFL(v)),"Socialinė-pilietinė veikla")+`<div class="dlg-b"><div>${socProgress(v)}</div><div class="list">${list.map(x=>`<div class="li"><span>${x.d} · <b>${esc(x.activity)}</b> <span class="muted">(${esc(x.type)})</span><div class="small muted">Įrašė: ${esc(uNameFL(x.by))}</div></span><b>${fmtH(x.hours[v])} val.</b></div>`).join("")||"Veiklų nėra."}</div></div><div class="dlg-f"><button class="btn" data-act="close">Uždaryti</button></div>`);break;}
 
   /* ---------- klasės vadovas ---------- */
   case"pickSid":ui.sid=v;render();break;
@@ -132,6 +138,8 @@ document.addEventListener("click",async e=>{
   case"newMsg":newMsgDlg();break;
   case"msgTab":ui.msgTab=v;render();break;
   case"openMsg":openMsg(v);pendingRender=true;break;
+  case"delMsg":{if(!confirm("Ištrinti šį laišką?"))return;const m=msgs.list.find(x=>x.id===v);if(!m)return;m.deleted??={};m.deleted[u.id]=true;closeDlg();render();
+    if(await DB.upd("message_recipients",{deleted_at:new Date().toISOString()},{message_id:v,recipient_id:u.id}))toast("Laiškas ištrintas");break;}
   case"reply":{const m=msgs.list.find(x=>x.id===v);newMsgDlg(m.from,"Re: "+m.subj.replace(/^Re: /,""));break;}
   case"start2fa":start2fa();break;
   case"stop2fa":{if(!confirm("Išjungti dviejų faktorių autentifikaciją?"))return;const {error}=await sb.auth.mfa.unenroll({factorId:mfa.factorId});if(error){toast("Nepavyko: "+error.message);return;}mfa={enabled:false,factorId:null};render();toast("2FA išjungta");break;}
@@ -168,7 +176,7 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
     authUi.keyInfo=null;await afterAuth();toast("Paskyra sukurta");break;}
 
   /* ---------- administratorius ---------- */
-  case"saveClass":{const obj={name:S("name").toUpperCase(),level:+S("level"),system:S("system"),headTeacherId:S("head")};if(core.classes.some(c=>c.name===obj.name&&c.id!==v)){toast("Tokia klasė jau yra");return;}
+  case"saveClass":{const sp=S("socialPlan");const obj={name:S("name").toUpperCase(),level:+S("level"),system:S("system"),headTeacherId:S("head"),socialPlan:sp===""?null:Math.max(0,+sp)};if(core.classes.some(c=>c.name===obj.name&&c.id!==v)){toast("Tokia klasė jau yra");return;}
     let c;if(v){c=cls(v);Object.assign(c,obj);}else{c={id:uid(),...obj};core.classes.push(c);}closeDlg();render();await DB.up("classes",R.cls(c));break;}
   case"saveStudent":{const obj={first:S("first"),last:S("last"),classId:S("classId"),email:S("email"),birth:S("birth")};closeDlg();
     if(v){Object.assign(users[v],obj);render();await DB.upd("people",R.person(users[v]),{id:v});}
@@ -208,8 +216,8 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
     await ensureLessonSaved(gid,dt);const d=G(gid);const rows=st.map(sid=>({id:uid(),s:sid,d:dt,kind,text,by:u.id}));d.notes.push(...rows);render();
     if(await DB.ins("notes",rows.map(n=>R.note(gid,n))))toast(`Įrašyta mokiniams: ${rows.length}`);break;}
   case"saveGroup":{const students=fd.getAll("gs");const programs={};students.forEach(s=>{const p=S("gp_"+s);if(p)programs[s]=p;});
-    const obj={name:S("name"),subjectId:S("subjectId"),kind:S("kind"),level:S("level"),hours:+S("hours")||1,students,programs,planId:S("planId")};
-    let g;if(v){g=grp(v);Object.assign(g,obj);}else{g={id:uid(),teacherId:u.id,evalSys:"10",extra:{},...obj};core.groups.push(g);ui.gid=g.id;}
+    const obj={name:S("name"),subjectId:S("subjectId"),kind:S("kind"),level:S("level"),hours:+S("hours")||1,students,programs,planId:S("planId"),evalSys:S("evalSys")==="isk"?"isk":"10"};
+    let g;if(v){g=grp(v);Object.assign(g,obj);}else{g={id:uid(),teacherId:u.id,extra:{},...obj};core.groups.push(g);ui.gid=g.id;}
     closeDlg();render();if(await DB.saveGroup(g,!v))toast("Grupė išsaugota");break;}
   case"savePlan":{const obj={name:S("name"),desc:S("desc"),subjectId:S("subjectId"),topics:S("topics").split(/\r?\n/).map(x=>x.trim()).filter(Boolean)};
     let p;if(v){p=core.plans.find(x=>x.id===v);Object.assign(p,obj);}else{p={id:uid(),ownerId:u.id,...obj};core.plans.push(p);}closeDlg();render();await DB.up("plans",R.plan(p));break;}
@@ -223,7 +231,7 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
   case"addChild":{const {data,error}=await sb.rpc("add_child",{p_key:S("key")});if(error){toast(error.message);return;}await loadAll();ui.child=data;render();toast(`Pridėtas vaikas: ${uNameFL(data)}`);break;}
 
   /* ---------- pranešimai, paskyra ---------- */
-  case"sendMsg":{const to=fd.getAll("to");if(!to.length)return;const m={id:uid(),from:u.id,to,subj:S("subj"),body:S("body"),at:new Date().toISOString(),read:{}};
+  case"sendMsg":{const to=[...new Set(fd.getAll("to"))];if(!to.length){toast("Pasirinkite bent vieną gavėją");return;}const m={id:uid(),from:u.id,to,subj:S("subj"),body:S("body"),at:new Date().toISOString(),read:{}};
     closeDlg();if(!(await DB.ins("messages",{id:m.id,from_id:u.id,subject:m.subj,body:m.body})))return;if(!(await DB.ins("message_recipients",to.map(r=>({message_id:m.id,recipient_id:r})))))return;
     msgs.list.push(m);ui.msgTab="out";render();toast("Pranešimas išsiųstas");break;}
   case"saveEmail":u.email=S("email");if(await DB.upd("people",{email:u.email||null},{id:u.id}))toast("Išsaugota");break;
@@ -233,5 +241,5 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
   }
 });
 
-document.addEventListener("input",e=>{if(e.target.closest('form[data-form="saveLesson"]')){lessonDirty=true;const n=$("#lessonDirtyNote");if(n)n.textContent="Yra neišsaugotų pakeitimų";}});
+document.addEventListener("input",e=>{if(e.target.id==="msgFilter"){const q=e.target.value.trim().toLowerCase();$$(".ritem").forEach(r=>r.hidden=!!q&&!r.dataset.q.includes(q));if(q)$$(".rgroup").forEach(d=>d.open=true);return;}if(e.target.closest('form[data-form="saveLesson"]')){lessonDirty=true;const n=$("#lessonDirtyNote");if(n)n.textContent="Yra neišsaugotų pakeitimų";}});
 window.addEventListener("beforeunload",e=>{if(lessonDirty){e.preventDefault();e.returnValue="";}});
