@@ -2,9 +2,11 @@
 /* ================= MOKINYS / TĖVAI ================= */
 function needChild(){const sid=viewedStudent();return sid?null:`<h1>Vaiko dienynas</h1><div class="sheet empty">Prie paskyros dar nepridėtas vaikas. <button class="btn" data-act="view" data-v="p_add">Pridėti vaiką</button></div>`;}
 /* ---- Bendri pagalbiniai ---- */
-function yearMonths(){const r=yearRange();const end=(TODAY()<r.to?TODAY():r.to).slice(0,7);const out=[];let y=+r.from.slice(0,4),m=+r.from.slice(5,7);
+/* Mėnesių skirtukai: nuo mokslo metų pradžios iki einamojo mėnesio arba vėliausio mėnesio, kuriame yra įrašų */
+function yearMonths(withData){const r=yearRange();let end=(TODAY()<r.to?TODAY():r.to).slice(0,7);
+  if(withData)withData.forEach(m=>{if(m>end&&m<=r.to.slice(0,7))end=m;});const out=[];let y=+r.from.slice(0,4),m=+r.from.slice(5,7);
   for(let i=0;i<14;i++){const k=`${y}-${String(m).padStart(2,"0")}`;out.push(k);if(k>=end)break;m++;if(m>12){m=1;y++;}}return out;}
-function monthTabs(key,withData){const ms=yearMonths();if(!ms.includes(ui[key])){const d=withData?ms.filter(m=>withData.has(m)):[];ui[key]=d.length?d[d.length-1]:ms[ms.length-1];}
+function monthTabs(key,withData){const ms=yearMonths(withData);if(!ms.includes(ui[key])){const now=TODAY().slice(0,7);const d=withData?ms.filter(m=>withData.has(m)):[];const past=d.filter(m=>m<=now);ui[key]=d.includes(now)?now:past.length?past[past.length-1]:d.length?d[0]:ms[ms.length-1];}
   return `<div class="mtabs" role="tablist">${ms.map(m=>`<button role="tab" aria-selected="${ui[key]===m}" data-act="mtab" data-k="${key}" data-v="${m}">${m}</button>`).join("")}</div>`;}
 const pad2=n=>String(n).padStart(2,"0");
 function stamp(at){if(!at)return"";const d=new Date(at);if(isNaN(d))return"";return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}<br>${pad2(d.getHours())}:${pad2(d.getMinutes())}`;}
@@ -33,7 +35,7 @@ VIEWS.s_diary=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();c
 
 /* ---- Pamokos (tema, klasės darbas, namų darbai) ---- */
 VIEWS.s_lessons=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();const have=new Set();studentGroups(sid).forEach(g=>G(g.id).lessons.forEach(l=>{if(l.topic||l.cw||l.hw)have.add(l.d.slice(0,7));}));const tabs=monthTabs("lMonth",have);const mon=ui.lMonth;const list=[];
-  studentGroups(sid).forEach(g=>G(g.id).lessons.filter(l=>l.d.startsWith(mon)&&l.d<=TODAY()&&(l.topic||l.cw||l.hw)).forEach(l=>list.push({...l,g})));
+  studentGroups(sid).forEach(g=>G(g.id).lessons.filter(l=>l.d.startsWith(mon)&&(l.topic||l.cw||l.hw)).forEach(l=>list.push({...l,g})));
   const days=[...new Set(list.map(x=>x.d))].sort().reverse();
   return `<h1>Pamokos</h1><p class="lead">Pamokų temos, klasės darbai ir namų darbai, kuriuos įrašė mokytojai.</p>${tabs}${days.length?`<div class="diary">${days.map(d=>`<div class="dday"><div class="dday-h"><b>${+d.slice(8)}</b><span>${WD[wdOf(d)]}</span></div><div class="dday-list">${
     list.filter(x=>x.d===d).sort((a,b)=>(a.no||0)-(b.no||0)).map(l=>`<div class="drow lrow"><div class="dtxt"><b>${l.no?l.no+". ":""}${esc(subjName(l.g.subjectId))}</b>${l.t?` ${typeLbl(l.t)}`:""}
