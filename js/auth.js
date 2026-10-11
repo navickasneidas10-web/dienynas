@@ -58,21 +58,21 @@ async function afterAuth(){
   subscribeRealtime();ready=true;render();
 }
 async function logout(){unsubscribeRealtime();await sb.auth.signOut();authUser=null;session=null;users={};gd={};social={list:[]};msgs={list:[]};
-  Object.assign(authUi,{step:"cred",err:"",info:"",keyInfo:null,tab:"login"});ui.view=null;await loadSettingsPublic();render();}
+  Object.assign(authUi,{step:"cred",err:"",info:"",keyInfo:null,tab:"login"});Object.assign(ui,{view:null,msgTab:"in",child:null,repStuCls:null,repStu:null,gid:null,cls:null,sid:null,lesson:null,dMonth:null,lMonth:null,stPer:null,ltab:"pamoka"});await loadSettingsPublic();render();}
 
 /* ================= Karkasas ================= */
 function menuFor(u){
   if(u.role==="admin")return[["Mokykla",[["a_home","Pradžia"],["a_classes","Klasės"],["a_students","Mokiniai"],["a_teachers","Mokytojai"],["a_subjects","Dalykai"]]],
     ["Nustatymai",[["a_periods","Laikotarpiai"],["a_status","Vertinimo būsenos"],["a_evalsys","Vertinimo sistemos"],["a_subs","Pavadavimai"],["a_tt","Mokytojų tvarkaraščiai"]]],
-    ["Ataskaitinės veiklos",[["a_reports","Ataskaitos"],["a_users","Naudotojai"],["a_data","Duomenys"]]],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
+    ["Ataskaitinės veiklos",[["a_reports","Ataskaitos"],["a_studrep","Mokinio ataskaita"],["a_users","Naudotojai"],["a_data","Duomenys"]]],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
   if(u.role==="teacher"){const m=[["Mano dienynas",[["t_tt","Tvarkaraštis"],["t_journal","Pamokos"],["t_grid","Žurnalas"],["t_groups","Grupės"],["t_plans","Pamokų teminiai planai"],["t_works","Atsiskaitomieji darbai"],["t_soc","Socialinė-pilietinė veikla"],["t_subs","Pavadavimai"]]],["Ataskaitinės veiklos",[["t_periods","Trimestrai / pusmečiai"]]]];
-    if(headClassesOf(u.id).length)m.push(["Klasės vadovui",[["h_just","N pateisinimas"],["h_summary","Klasės suvestinė"],["h_keys","Tėvų raktai"],["h_soc","Soc.-pilietinės veiklos ataskaita"]]]);
+    if(headClassesOf(u.id).length)m.push(["Klasės vadovui",[["h_just","N pateisinimas"],["h_summary","Klasės suvestinė"],["h_studrep","Mokinio ataskaita"],["h_keys","Tėvų raktai"],["h_soc","Soc.-pilietinės veiklos ataskaita"]]]);
     m.push(["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]);return m;}
   const base=[["s_diary","Dienynas"],["s_tt","Tvarkaraštis"],["s_lessons","Pamokos"],["s_hw","Namų darbai"],["s_works","Atsiskaitomieji darbai"],["s_att","Lankomumas"],["s_notes","Pagyrimai / pastabos"],["s_periods","Trimestrai / pusmečiai"],["s_soc","Socialinė-pilietinė veikla"]];
   if(u.role==="parent")return[["Vaiko dienynas",base],["Tėvams",[["p_child","Vaiko duomenys"],["p_add","Pridėti vaiką"]]],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
   return[["Mano dienynas",base],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
 }
-const unread=u=>msgs.list.filter(m=>m.to.includes(u.id)&&!(m.read||{})[u.id]).length;
+const unread=u=>msgs.list.filter(m=>m.to.includes(u.id)&&!(m.read||{})[u.id]&&!(m.deleted||{})[u.id]).length;
 function render(){
   pendingRender=false;
   if(!ready){$("#root").innerHTML=`<div class="empty" style="padding-top:30vh"><span class="spin"></span>Įkeliami dienyno duomenys…</div>`;return;}
