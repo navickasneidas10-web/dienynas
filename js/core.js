@@ -1,7 +1,7 @@
 /* Dienynas — konstantos, būsena ir skaičiavimai */
 /* ================= Konstantos ================= */
 /* Pažymių tipai (kodai suderinami su jau įrašytais pažymiais) */
-const TYPES=[["PR","Praktinis darbas"],["KL","Klasės darbas"],["KD","Kontrolinis darbas"],["PP","Paprastas"],["SD","Savarankiškas darbas"],["ND","Namų darbas"],["TD","Teorinis darbas"],["TA","Testas"],["KP","Kaupiamasis"],["KM","Pažymys iš kitos įstaigos"],["PJ","Projektinis darbas"],["RS","Rašinys"]];
+const TYPES=[["KL","Klasės darbas"],["PR","Praktinis darbas"],["KD","Kontrolinis darbas"],["PP","Paprastas"],["SD","Savarankiškas darbas"],["ND","Namų darbas"],["TD","Teorinis darbas"],["TA","Testas"],["KP","Kaupiamasis"],["KM","Pažymys iš kitos įstaigos"],["PJ","Projektinis darbas"],["RS","Rašinys"]];
 const TYPE_NAME=Object.fromEntries(TYPES);
 const WORK_TYPES=TYPES.filter(([k])=>["KD","SD","PR","TD","TA","PJ","RS"].includes(k));
 const JUST=[["nt","Pateisinta tėvų (dėl ligos)"],["np","Pateisinta (kita priežastis)"],["nl","Pateisinta (dėl ligos)"],["nk","Pateisinta tėvų (ne dėl ligos)"],["ns","Pateisinta (direktoriaus įsakymu)"],["nv","Pateisinta (varžybos, olimpiados)"]];
@@ -102,7 +102,14 @@ function annual(g,sid){const pg=G(g.id).pg[sid]||{};const ps=periodsG(g);const v
   const n=vals.filter(v=>typeof v==="number");if(n.length<vals.length)return{avg:null,sug:null};const a=n.reduce((x,y)=>x+y,0)/n.length;return{avg:a,sug:roundBy(a,0.5)};}
 
 /* ---- Teisės ---- */
-function activeSubsTo(uidT){return core.subs.filter(s=>s.to===uidT);}
+/* Pavadavimai galioja tik nurodytu laikotarpiu */
+function activeSubsTo(uidT,d){d=d||TODAY();return core.subs.filter(s=>s.to===uidT&&d>=s.dFrom&&d<=s.dTo);}
+function subsOverlapping(uidT,from,to){return core.subs.filter(s=>s.to===uidT&&s.dFrom<=to&&s.dTo>=from);}
+/* Ar mokytojas (ne savininkas) šią dieną vaduoja grupę */
+const isSubGroup=(g,u)=>!!u&&g.teacherId!==u.id;
+/* Pamokų pildymui: savos grupės + vykstančių ir būsimų pavadavimų grupės (rodomos tik pavadavimo dienos) */
+function journalGroups(tid){const t=TODAY();const subT=new Set(core.subs.filter(s=>s.to===tid&&s.dTo>=t).map(s=>s.from));
+  return [...core.groups.filter(g=>g.teacherId===tid),...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==tid)];}
 function canEditDate(g,d){const u=me();if(!u||u.role!=="teacher")return false;if(g.teacherId===u.id)return true;return core.subs.some(s=>s.from===g.teacherId&&s.to===u.id&&d>=s.dFrom&&d<=s.dTo);}
 function teacherGroups(tid,withSubs=true){const own=core.groups.filter(g=>g.teacherId===tid);if(!withSubs)return own;const subT=new Set(activeSubsTo(tid).map(s=>s.from));return [...own,...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==tid)];}
 function headClassesOf(tid){const d=TODAY();const own=core.classes.filter(c=>c.headTeacherId===tid);const sub=core.headSubs.filter(h=>h.to===tid&&d>=h.dFrom&&d<=h.dTo).map(h=>cls(h.classId)).filter(Boolean);return [...own,...sub.filter(c=>!own.includes(c))];}
