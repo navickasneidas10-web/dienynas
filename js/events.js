@@ -85,7 +85,7 @@ document.addEventListener("click",async e=>{
   case"la":{const{gid,dt,ro}=ls;if(ro)return;const sid=el.dataset.s;const d=G(gid);const a=d.att.find(x=>x.s===sid&&x.d===dt);const m=a&&a.m===v?"":v;
     await ensureLessonSaved(gid,dt);setAtt(d,sid,dt,m);refreshLessonRows();const now=d.att.find(x=>x.s===sid&&x.d===dt);if(now)await DB.att(gid,now);else await DB.delAtt(gid,sid,dt);break;}
   case"cell":openCell(ui.gid,el.dataset.s,el.dataset.d);break;
-  case"roCell":toast("Šios pamokos įrašų keisti negalite");break;
+  case"roCell":toast("Šią pamoką galite tik peržiūrėti — ji nepatenka į jūsų pavadavimo laikotarpį");break;
   case"pickV":$$("#pickV button").forEach(b=>b.setAttribute("aria-pressed",b===el&&dlgState.v!==v?"true":"false"));dlgState.v=dlgState.v===v?null:v;break;
   case"pickA":$$("#pickA button").forEach(b=>b.setAttribute("aria-pressed",b===el?"true":"false"));dlgState.a=v;break;
   case"saveCell":saveCell(el.dataset.g,el.dataset.s,el.dataset.d);break;
