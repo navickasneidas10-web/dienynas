@@ -1,12 +1,13 @@
 /* Dienynas — mokytojo ir klasės vadovo rodiniai */
 /* ================= Tvarkaraščio tinklelis ================= */
 function weekNav(){const m=mondayOf(ui.week||TODAY());return `<div class="row" style="gap:4px"><button class="btn" data-act="weekMove" data-v="-7" aria-label="Ankstesnė savaitė">‹</button><label class="field">Savaitė<input type="date" data-ch="week" value="${m}"></label><button class="btn" data-act="weekMove" data-v="7" aria-label="Kita savaitė">›</button><button class="btn" data-act="weekMove" data-v="0">Ši savaitė</button></div>`;}
-function weekSlots(gids){const mon=mondayOf(ui.week||TODAY());const fri=addDays(mon,4);const slots={};let maxNo=6;
+function weekSlots(gids,dateOk){const mon=mondayOf(ui.week||TODAY());const fri=addDays(mon,4);const slots={};let maxNo=6;
   gids.forEach(gid=>{const oc=occDates(gid,mon,fri);const L=G(gid).lessons;
+    if(dateOk)[...oc.keys()].forEach(d=>{if(!dateOk(gid,d))oc.delete(d);});
     oc.forEach((no,d)=>{(slots[no+"|"+d]??=[]).push({gid,d,no});maxNo=Math.max(maxNo,no);});
-    L.filter(l=>l.d>=mon&&l.d<=fri&&l.no&&!oc.has(l.d)).forEach(l=>{(slots[l.no+"|"+l.d]??=[]).push({gid,d:l.d,no:l.no});maxNo=Math.max(maxNo,l.no);});});
+    L.filter(l=>l.d>=mon&&l.d<=fri&&l.no&&!oc.has(l.d)&&(!dateOk||dateOk(gid,l.d))).forEach(l=>{(slots[l.no+"|"+l.d]??=[]).push({gid,d:l.d,no:l.no});maxNo=Math.max(maxNo,l.no);});});
   return{mon,slots,maxNo};}
-function weekGrid(gids,opt={}){const{mon,slots,maxNo}=weekSlots(gids);const t=TODAY();const u=me();
+function weekGrid(gids,opt={}){const{mon,slots,maxNo}=weekSlots(gids,opt.dateOk);const t=TODAY();const u=me();
   let h=`<div class="scroll"><div class="week"><div></div>${[0,1,2,3,4].map(i=>{const d=addDays(mon,i);return `<div class="wh ${d===t?"today":""}">${WDL[i]} <span class="muted">${fmtD(d)}</span>${isHoliday(d)?' <span class="tag">laisva</span>':""}</div>`;}).join("")}`;
   for(let no=1;no<=maxNo;no++){h+=`<div class="no">${no}</div>`;for(let i=0;i<5;i++){const d=addDays(mon,i);const list=slots[no+"|"+d]||[];
     h+=`<div class="slot ${list.length?"":"empty"}">${list.map(x=>{const g=grp(x.gid);const l=G(x.gid).lessons.find(y=>y.d===x.d);const kd=l&&["KD","TA","SD"].includes(l.t);
@@ -17,10 +18,14 @@ function weekGrid(gids,opt={}){const{mon,slots,maxNo}=weekSlots(gids);const t=TO
   return h+`</div></div>`;}
 
 /* ================= MOKYTOJAS ================= */
-VIEWS.t_tt=u=>{const gids=teacherGroups(u.id).map(g=>g.id);
+VIEWS.t_tt=u=>{const mon=mondayOf(ui.week||TODAY());const fri=addDays(mon,4);
+  /* savos grupės + tik tos vaduojamo mokytojo pamokos, kurios patenka į pavadavimo laikotarpį */
+  const subT=new Set(subsOverlapping(u.id,mon,fri).map(s=>s.from));
+  const gids=[...teacherGroups(u.id,false),...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==u.id)].map(g=>g.id);
+  const dateOk=(gid,d)=>{const g=grp(gid);return g.teacherId===u.id||canEditDate(g,d);};
   return `<h1>Tvarkaraštis</h1><p class="lead">Paspaudę pamoką įvesite temą, namų darbus, įvertinimus ir lankomumą. Pamokos sukuriamos pagal tvarkaraštį; vaduojamos pamokos pažymėtos punktyru.</p>
   <div class="bar">${weekNav()}<button class="btn pri" data-act="ttEdit">Redaguoti tvarkaraštį</button></div>
-  ${gids.length?weekGrid(gids):`<div class="sheet empty">Pirma sukurkite grupę skiltyje „Grupės“.</div>`}`;};
+  ${gids.length?weekGrid(gids,{dateOk}):`<div class="sheet empty">Pirma sukurkite grupę skiltyje „Grupės“.</div>`}`;};
 function ttEditDlg(){const u=me();const own=teacherGroups(u.id,false);const entries=core.timetable.filter(t=>own.some(g=>g.id===t.g)).sort((a,b)=>a.wd-b.wd||a.no-b.no);
   const r=yearRange();
   openDlg(dlgHead("Tvarkaraščio redagavimas")+`<div class="dlg-b">
@@ -34,14 +39,15 @@ function ttEditDlg(){const u=me();const own=teacherGroups(u.id,false);const entr
    <div class="small muted">Lyginės ir nelyginės savaitės skaičiuojamos nuo mokslo metų pradžios, ne pagal kalendorių.</div>
    <div><button class="btn pri">Pridėti pamoką</button></div></form>`:'<div class="note">Neturite grupių.</div>'}</div><div class="dlg-f"><button class="btn" data-act="close">Uždaryti</button></div>`);}
 
-function journalDates(g,pid){const p=core.settings.periods[pid];const lim=addDays(TODAY(),14);const to=p.to<lim?p.to:lim;const d=G(g.id);
-  const set=new Set([...occDates(g.id,p.from,to).keys(),...d.lessons.map(l=>l.d),...d.grades.map(x=>x.d),...d.att.map(x=>x.d)]);return [...set].filter(x=>inPeriod(x,pid)).sort();}
+function journalDates(g,pid,all){const p=core.settings.periods[pid];const lim=addDays(TODAY(),14);const to=p.to<lim?p.to:lim;const d=G(g.id);
+  const set=new Set([...occDates(g.id,p.from,to).keys(),...d.lessons.map(l=>l.d),...d.grades.map(x=>x.d),...d.att.map(x=>x.d)]);const u=me();
+  return [...set].filter(x=>inPeriod(x,pid)&&(all||!isSubGroup(g,u)||canEditDate(g,x))).sort();}
 VIEWS.t_grid=u=>{
-  const gs=teacherGroups(u.id);const gOpts=gs.map(g=>[g.id,gLabel(g)]);ensureIn("gid",gOpts);const g=grp(ui.gid);
+  const gs=journalGroups(u.id);const gOpts=gs.map(g=>[g.id,gLabel(g)]);ensureIn("gid",gOpts);const g=grp(ui.gid);
   if(!g)return `<h1>Žurnalas</h1><div class="sheet empty">Grupių dar nėra. <button class="btn" data-act="view" data-v="t_groups">Sukurti grupę</button></div>`;
-  const pOpts=periodOpts(sysOfGroup(g));ensureIn("pid",pOpts,curPeriod(sysOfGroup(g)));const pid=ui.pid;const d=G(g.id);const dates=journalDates(g,pid);
+  const pOpts=periodOpts(sysOfGroup(g));ensureIn("pid",pOpts,curPeriod(sysOfGroup(g)));const pid=ui.pid;const d=G(g.id);const dates=journalDates(g,pid,true);
   const sids=[...g.students].sort(byName);const isk=(g.evalSys||"10")==="isk";
-  const head=dates.map(dt=>{const l=d.lessons.find(x=>x.d===dt);const t=l&&l.t;const ro=!canEditDate(g,dt);return `<th class="d ${t==="KD"?"kd":""}" data-act="openLesson" data-g="${g.id}" data-d="${dt}" title="${esc(l&&l.topic||"Pamoka")}${t?" · "+esc(TYPE_NAME[t]):""}${l&&l.hw?" · ND: "+esc(l.hw):""}">${fmtD(dt)}<small>${t||(l&&l.hw?"ND":"&nbsp;")}</small></th>`;}).join("");
+  const head=dates.map(dt=>{const l=d.lessons.find(x=>x.d===dt);const t=l&&l.t;const ro=!canEditDate(g,dt);return `<th class="d ${t==="KD"?"kd":""} ${ro?"ro":""}" data-act="${ro?"roCell":"openLesson"}" data-g="${g.id}" data-d="${dt}" title="${esc(l&&l.topic||"Pamoka")}${t?" · "+esc(TYPE_NAME[t]):""}${l&&l.hw?" · ND: "+esc(l.hw):""}">${fmtD(dt)}<small>${t||(l&&l.hw?"ND":"&nbsp;")}</small></th>`;}).join("");
   const rows=sids.map(sid=>{const cells=dates.map(dt=>{const gg=d.grades.filter(x=>x.s===sid&&x.d===dt);const a=d.att.find(x=>x.s===sid&&x.d===dt);const nt=d.notes.filter(x=>x.s===sid&&x.d===dt);const ro=!canEditDate(g,dt);
       const at=a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}" title="${a.m==="pv"?"Pavėlavo":a.j?esc(JUST_NAME[a.j]):"Nepateisinta"}">${a.m==="pv"?"p":a.j||"n"}</span>`:"";
       return `<td class="c ${ro?"ro":""}" data-act="${ro?"roCell":"cell"}" data-s="${sid}" data-d="${dt}"><div class="cellw">${gg.map(x=>chip(x)).join("")}${at}${nt.map(n=>`<span class="nt" title="${esc(n.text)}">${NOTE_ICON[n.kind]||""}</span>`).join("")}</div></td>`;}).join("");
@@ -86,7 +92,7 @@ const NOTE_NAME=Object.fromEntries(NOTE_KINDS);
 const NOTE_ICON={p:"👍",n:"⚠️",k:"💬"};
 const LTABS=[["pamoka","Pamoka"],["ivert","Įvertinimai"],["pastabos","Pastabos / pagyrimai / komentarai"]];
 VIEWS.t_journal=u=>{
-  const gs=teacherGroups(u.id);const gOpts=gs.map(g=>[g.id,gLabel(g)]);ensureIn("gid",gOpts);const g=grp(ui.gid);
+  const gs=journalGroups(u.id);const gOpts=gs.map(g=>[g.id,gLabel(g)]);ensureIn("gid",gOpts);const g=grp(ui.gid);
   if(!g)return `<h1>Pamokos</h1><div class="sheet empty">Grupių dar nėra. <button class="btn" data-act="view" data-v="t_groups">Sukurti grupę</button></div>`;
   const pOpts=periodOpts(sysOfGroup(g));ensureIn("pid",pOpts,curPeriod(sysOfGroup(g)));const p=core.settings.periods[ui.pid];
   const dates=journalDates(g,ui.pid);
