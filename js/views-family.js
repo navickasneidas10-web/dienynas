@@ -7,7 +7,9 @@ function yearMonths(withData){const r=yearRange();let end=(TODAY()<r.to?TODAY():
   if(withData)withData.forEach(m=>{if(m>end&&m<=r.to.slice(0,7))end=m;});const out=[];let y=+r.from.slice(0,4),m=+r.from.slice(5,7);
   for(let i=0;i<14;i++){const k=`${y}-${String(m).padStart(2,"0")}`;out.push(k);if(k>=end)break;m++;if(m>12){m=1;y++;}}return out;}
 function monthTabs(key,withData){const ms=yearMonths(withData);if(!ms.includes(ui[key])){const now=TODAY().slice(0,7);const d=withData?ms.filter(m=>withData.has(m)):[];const past=d.filter(m=>m<=now);ui[key]=d.includes(now)?now:past.length?past[past.length-1]:d.length?d[0]:ms[ms.length-1];}
-  return `<div class="mtabs" role="tablist">${ms.map(m=>`<button role="tab" aria-selected="${ui[key]===m}" data-act="mtab" data-k="${key}" data-v="${m}">${m}</button>`).join("")}</div>`;}
+  const i=ms.indexOf(ui[key]),m=ui[key];
+  return `<div class="mtabs only-d" role="tablist">${ms.map(m=>`<button role="tab" aria-selected="${ui[key]===m}" data-act="mtab" data-k="${key}" data-v="${m}">${m}</button>`).join("")}</div>
+  <div class="mnav only-m"><button data-act="mtab" data-k="${key}" data-v="${ms[i-1]||""}" ${i<=0?"disabled":""} aria-label="Ankstesnis mėnuo">${ICON.chevL}</button><b>${m.slice(0,4)} ${MONTHS[+m.slice(5)-1].toUpperCase()}</b><button data-act="mtab" data-k="${key}" data-v="${ms[i+1]||""}" ${i>=ms.length-1?"disabled":""} aria-label="Kitas mėnuo">${ICON.chev}</button></div>`;}
 const pad2=n=>String(n).padStart(2,"0");
 function stamp(at){if(!at)return"";const d=new Date(at);if(isNaN(d))return"";return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}<br>${pad2(d.getHours())}:${pad2(d.getMinutes())}`;}
 const typeLbl=t=>`<span class="${t==="KD"?"kdtxt":""}">${esc(TYPE_NAME[t]||t||"")}</span>`;
@@ -52,8 +54,8 @@ VIEWS.s_diary=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();c
     return head+`<div class="sheet scroll">${rows?`<table><thead><tr><th>Dalykas</th><th class="only-d">Įvertinimai</th><th class="num">Vidurkis</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">Šį mėnesį įvertinimų nėra.</div>'}</div>`;}
   const days=[...new Set(items.map(i=>i.d))].sort().reverse();
   return head+dayBlocks(days,d=>items.filter(i=>i.d===d).sort((a,b)=>lsort(subjName(a.g.subjectId),subjName(b.g.subjectId))).map(i=>{const x=i.x;const A=`data-act="stuLesson" data-g="${i.g.id}" data-d="${i.d}"`;
-    if(i.k==="g")return drow(A,chip(x,false),`<div class="dtxt-in${stripe(x.t)}"><b>${esc(subjName(i.g.subjectId))}</b><div>${typeLbl(x.t)}${x.c?` <span class="muted">— ${esc(x.c)}</span>`:""}</div></div>`,stamp(i.at));
-    return drow(A,`<span class="g">${x.m==="pv"?"p":x.j||"n"}</span>`,`<b>${esc(subjName(i.g.subjectId))}</b><div class="muted">${x.m==="pv"?"Pavėlavo":x.j?"Nedalyvavo — "+esc(JUST_NAME[x.j]):"Nedalyvavo (nepateisinta)"}</div>`,stamp(i.at));}).join(""))+typeLegend();};
+    if(i.k==="g")return drow(A,chip({v:x.v},false),`<div class="dtxt-in${stripe(x.t)}"><b>${esc(subjName(i.g.subjectId))}</b><div>${esc(TYPE_NAME[x.t]||x.t||"")}${x.c?` <span class="muted">— ${esc(x.c)}</span>`:""}</div></div>`,stamp(i.at));
+    return drow(A,`<span class="g">${x.m==="pv"?"p":x.j||"n"}</span>`,`<b>${esc(subjName(i.g.subjectId))}</b><div class="muted">${x.m==="pv"?"Pavėlavo":x.j?"Nedalyvavo — "+esc(JUST_NAME[x.j]):"Nedalyvavo (nepateisinta)"}</div>`,stamp(i.at));}).join(""));};
 
 /* ---- Pamokos (tema, klasės darbas, namų darbai) ---- */
 VIEWS.s_lessons=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();const have=new Set();studentGroups(sid).forEach(g=>G(g.id).lessons.forEach(l=>{if(l.topic||l.cw||l.hw)have.add(l.d.slice(0,7));}));const tabs=monthTabs("lMonth",have);const mon=ui.lMonth;const list=[];
@@ -75,7 +77,7 @@ VIEWS.s_hw=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();cons
 
 /* ---- Trimestrai / pusmečiai: tik pasirinkto laikotarpio pažymiai ir išvesti įvertinimai ---- */
 VIEWS.s_periods=()=>{const n=needChild();if(n)return n;return periodsReport(viewedStudent(),"<h1>Trimestrai / pusmečiai</h1>");};
-/* Asmeninė mokymosi ataskaita: tą patį mato mokinys, tėvai, klasės vadovas ir administratorius */
+/* Asmeninė mokymosi ataskaita: tą patį mato mokinys, tėvai, klasės vadovas ir direktorius */
 function periodsReport(sid,head){const sys=sysOfStudent(sid);const ps=periodsSys(sys);
   const pOpts=[...ps.map(p=>[p.id,p.name]),["Y","Metinis"]];ensureIn("stPer",pOpts,curPeriod(sys));const pid=ui.stPer;
   const gs=studentGroups(sid).sort((a,b)=>lsort(subjName(a.subjectId),subjName(b.subjectId)));
@@ -128,21 +130,21 @@ VIEWS.p_child=()=>{const n=needChild();if(n)return n;const s=U(viewedStudent());
   <div class="sheet pad"><form data-form="saveChild" style="display:flex;flex-direction:column;gap:12px;max-width:520px"><div class="row"><label class="field" style="flex:1">Vardas<input name="first" value="${esc(s.first)}" required></label><label class="field" style="flex:1">Pavardė<input name="last" value="${esc(s.last)}" required></label></div>
   <div class="row"><label class="field">Gimimo data<input type="date" name="birth" value="${esc(s.birth||"")}"></label><label class="field" style="flex:1">El. paštas<input type="email" name="email" value="${esc(s.email||"")}"></label></div>
   <div><button class="btn pri">Išsaugoti</button></div></form></div>
-  <h2>Prisijungimas</h2><div class="sheet pad">${s.login?`Vaikas prisijungia vardu <b>${esc(s.login)}</b>.${s.email?"":" Nurodykite el. paštą, kad būtų lengviau atkurti prisijungimą."} Pamiršus slaptažodį, naują nustato mokyklos administratorius.`:`Vaikas dar neužsiregistravo. Mokinio raktas: <span class="mono">${esc(s.key)}</span>`}</div>`;};
-VIEWS.p_add=()=>`<h1>Pridėti vaiką</h1><p class="lead">Jei keli jūsų vaikai mokosi mokykloje, pakanka vienos paskyros. Įveskite kito vaiko tėvų raktą — jį suteikia klasės vadovas arba administratorius.</p>
+  <h2>Prisijungimas</h2><div class="sheet pad">${s.login?`Vaikas prisijungia vardu <b>${esc(s.login)}</b>.${s.email?"":" Nurodykite el. paštą, kad būtų lengviau atkurti prisijungimą."} Pamiršus slaptažodį, naują nustato mokyklos direktorius.`:`Vaikas dar neužsiregistravo. Mokinio raktas: <span class="mono">${esc(s.key)}</span>`}</div>`;};
+VIEWS.p_add=()=>`<h1>Pridėti vaiką</h1><p class="lead">Jei keli jūsų vaikai mokosi mokykloje, pakanka vienos paskyros. Įveskite kito vaiko tėvų raktą — jį suteikia klasės vadovas arba direktorius.</p>
   <div class="sheet pad"><form data-form="addChild" class="bar" style="margin:0"><label class="field" style="flex:1">Tėvų raktas<input name="key" class="mono" required placeholder="vardpavaT…"></label><button class="btn pri">Išsaugoti</button></form></div>
   <h2>Pridėti vaikai</h2><div class="list">${(me().childIds||[]).filter(U).map(c=>`<div class="li"><span>${esc(uNameFL(c))} · ${esc(clsName(U(c).classId))}</span></div>`).join("")||'<span class="muted small">Nėra.</span>'}</div>`;
 
 /* ================= PRANEŠIMAI ================= */
 function recipientsFor(u){let ids=new Set();const all=Object.values(users).filter(x=>x.id!==u.id);
-  if(u.role==="admin")all.forEach(x=>ids.add(x.id));
-  else if(u.role==="teacher"){all.filter(x=>x.role==="admin"||x.role==="teacher").forEach(x=>ids.add(x.id));const ss=new Set();teacherGroups(u.id).forEach(g=>g.students.forEach(s=>ss.add(s)));headClassesOf(u.id).forEach(c=>classStudents(c.id).forEach(s=>ss.add(s.id)));
+  if(hasRole(u,"admin")||hasRole(u,"deputy"))all.forEach(x=>ids.add(x.id));
+  else if(hasRole(u,"teacher")){all.filter(isStaff).forEach(x=>ids.add(x.id));const ss=new Set();teacherGroups(u.id).forEach(g=>g.students.forEach(s=>ss.add(s)));headClassesOf(u.id).forEach(c=>classStudents(c.id).forEach(s=>ss.add(s.id)));
     ss.forEach(s=>{ids.add(s);all.filter(p=>p.role==="parent"&&(p.childIds||[]).includes(s)).forEach(p=>ids.add(p.id));});}
   else{const kids=u.role==="student"?[u.id]:(u.childIds||[]);kids.forEach(k=>{studentGroups(k).forEach(g=>ids.add(g.teacherId));const c=cls((U(k)||{}).classId);if(c&&c.headTeacherId)ids.add(c.headTeacherId);});all.filter(x=>x.role==="admin").forEach(x=>ids.add(x.id));}
   return [...ids].filter(id=>U(id)&&U(id).login).sort((a,b)=>lsort(U(a).role+uName(a),U(b).role+uName(b)));}
-const MSG_GROUPS=[["admin","Administratoriai"],["teacher","Mokytojai"],["parent","Tėvai"],["student","Mokiniai"]];
+const MSG_GROUPS=[["admin","Direktorius"],["deputy","Direktoriaus pavaduotojai"],["teacher","Mokytojai"],["parent","Tėvai"],["student","Mokiniai"]];
 function msgWho(id){const x=U(id);if(!x)return"";if(x.role==="student")return clsName(x.classId)+" kl.";if(x.role==="parent"){const k=(x.childIds||[]).filter(U);return k.length?"vaikas: "+k.map(c=>`${uNameFL(c)} (${clsName(U(c).classId)})`).join(", "):"";}
-  if(x.role==="teacher"){const h=core.classes.filter(c=>c.headTeacherId===id).map(c=>c.name);return h.length?"kl. vadovas "+h.join(", "):"";}return"";}
+  if(isStaff(x)){const h=core.classes.filter(c=>c.headTeacherId===id).map(c=>c.name);const extra=rolesOf(x).filter(r=>r!==x.role).map(r=>ROLE_NAME[r].toLowerCase());return [...extra,...(h.length?["kl. vadovas "+h.join(", ")]:[])].join(", ");}return"";}
 const inboxOf=u=>msgs.list.filter(m=>m.to.includes(u.id)&&!(m.deleted||{})[u.id]);
 VIEWS.msg=u=>{const tab=ui.msgTab;const inbox=inboxOf(u).sort((a,b)=>lsort(b.at,a.at));const out=msgs.list.filter(m=>m.from===u.id).sort((a,b)=>lsort(b.at,a.at));
   const list=tab==="out"?out:inbox;

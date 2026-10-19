@@ -53,7 +53,7 @@ async function loadAll() {
   c.headSubs = D.head_subs.map(x => ({ id: x.id, classId: x.class_id, to: x.to_teacher, dFrom: x.date_from, dTo: x.date_to }));
 
   const u = {};
-  D.people.forEach(p => { u[p.id] = { id: p.id, role: p.role, first: p.first_name, last: p.last_name, classId: p.class_id || "", email: p.email || "",
+  D.people.forEach(p => { u[p.id] = { id: p.id, role: p.role, roles: Array.isArray(p.roles) ? p.roles : [], first: p.first_name, last: p.last_name, classId: p.class_id || "", email: p.email || "",
     birth: p.birth || "", login: p.login || null, userId: p.user_id || null, mustChange: p.must_change, key: null, parentKeys: [], childIds: [] }; });
   D.reg_keys.forEach(k => { const p = u[k.person_id]; if (!p) return; if (k.kind === "own") p.key = k.key; else p.parentKeys.push({ id: k.id, key: k.key, usedBy: k.used_by }); });
   D.parent_children.forEach(x => { if (u[x.parent_id]) u[x.parent_id].childIds.push(x.student_id); });
@@ -95,7 +95,7 @@ async function W(promise, quiet) {
 const R = {
   cls: c => ({ id: c.id, name: c.name, level: c.level, system: c.system, head_teacher_id: c.headTeacherId || null, social_plan: c.socialPlan == null ? null : c.socialPlan }),
   subject: s => ({ id: s.id, name: s.name, kind: s.kind, parent_id: s.parentId || null, code: s.code || null }),
-  person: p => ({ id: p.id, role: p.role, first_name: p.first, last_name: p.last, class_id: p.classId || null, email: p.email || null, birth: p.birth || null }),
+  person: p => ({ id: p.id, role: p.role, ...(p.roles ? { roles: p.roles } : {}), first_name: p.first, last_name: p.last, class_id: p.classId || null, email: p.email || null, birth: p.birth || null }),
   group: g => ({ id: g.id, name: g.name, subject_id: g.subjectId, teacher_id: g.teacherId, kind: g.kind, level: g.level || null, hours: g.hours,
     eval_sys: g.evalSys || "10", extra: g.extra || {}, plan_id: g.planId || null }),
   members: g => g.students.map(s => ({ group_id: g.id, student_id: s, program: (g.programs || {})[s] || null })),

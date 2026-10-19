@@ -1,6 +1,6 @@
 /* Dienynas — konstantos, būsena ir skaičiavimai */
 /* ================= Konstantos ================= */
-/* Pamokų laikas (skambučiai). Administratorius gali pakeisti skiltyje „Laikotarpiai“ */
+/* Pamokų laikas (skambučiai). Direktorius gali pakeisti skiltyje „Laikotarpiai“ */
 const DEFAULT_BELLS=[["08:00","08:45"],["08:55","09:40"],["09:50","10:35"],["10:55","11:40"],["12:00","12:45"],["12:55","13:40"],["13:50","14:35"],["14:45","15:30"],["15:40","16:25"]];
 const bellOf=no=>{const b=(core.settings.bells||DEFAULT_BELLS)[(+no||0)-1];return b&&b[0]&&b[1]?b:null;};
 const MONTHS_GEN=["sausio","vasario","kovo","balandžio","gegužės","birželio","liepos","rugpjūčio","rugsėjo","spalio","lapkričio","gruodžio"];
@@ -34,7 +34,12 @@ const WDL=["Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktad
 const PDEF={pusm:[["P1","I pusmetis"],["P2","II pusmetis"]],trim:[["T1","I trimestras"],["T2","II trimestras"],["T3","III trimestras"]]};
 const PNAME={P1:"I pusmetis",P2:"II pusmetis",T1:"I trimestras",T2:"II trimestras",T3:"III trimestras",Y:"Metinis"};
 const SOC_TYPES=["Pagalba žmonėms","Aplinkosauginė veikla","Kultūrinė veikla","Pilietinė veikla","Savanorystė mokykloje","Sportinė veikla"];
-const ROLE_NAME={admin:"Administratorius",teacher:"Mokytojas",student:"Mokinys",parent:"Tėvai"};
+const ROLE_NAME={admin:"Direktorius",deputy:"Direktoriaus pavaduotojas",teacher:"Mokytojas",student:"Mokinys",parent:"Tėvai"};
+const STAFF_ROLES=["admin","deputy","teacher"];
+const hasRole=(u,r)=>!!u&&(u.role===r||(u.roles||[]).includes(r));
+const rolesOf=u=>u?[u.role,...(u.roles||[]).filter(r=>r!==u.role)]:[];
+const roleNames=u=>{const rs=rolesOf(u);return STAFF_ROLES.filter(r=>rs.includes(r)).concat(rs.filter(r=>!STAFF_ROLES.includes(r))).map(r=>ROLE_NAME[r]).join(", ");};
+const isStaff=u=>STAFF_ROLES.some(r=>hasRole(u,r));
 const EVAL_SYS={"10":"Dešimtbalė sistema",isk:"Vertinimas įskaita"};
 
 function defaultPeriodDates(y){return{
@@ -75,7 +80,8 @@ const uName=id=>{const u=U(id);return u?`${u.last} ${u.first}`:"(pašalintas)";}
 const uNameFL=id=>{const u=U(id);return u?`${u.first} ${u.last}`:"(pašalintas)";};
 const byName=(a,b)=>lsort(uName(a),uName(b));
 const students=()=>Object.values(users).filter(u=>u.role==="student");
-const teachers=()=>Object.values(users).filter(u=>u.role==="teacher").sort((a,b)=>lsort(a.last,b.last));
+const teachers=()=>Object.values(users).filter(u=>hasRole(u,"teacher")).sort((a,b)=>lsort(a.last,b.last));
+const staff=()=>Object.values(users).filter(isStaff).sort((a,b)=>lsort(a.last+a.first,b.last+b.first));
 const cls=id=>core.classes.find(c=>c.id===id);
 const clsName=id=>{const c=cls(id);return c?c.name:"—";};
 const classStudents=cid=>students().filter(s=>s.classId===cid).sort((a,b)=>lsort(a.last+a.first,b.last+b.first));
@@ -131,7 +137,7 @@ const isSubGroup=(g,u)=>!!u&&g.teacherId!==u.id;
 /* Pamokų pildymui: savos grupės + vykstančių ir būsimų pavadavimų grupės (rodomos tik pavadavimo dienos) */
 function journalGroups(tid){const t=TODAY();const subT=new Set(core.subs.filter(s=>s.to===tid&&s.dTo>=t).map(s=>s.from));
   return [...core.groups.filter(g=>g.teacherId===tid),...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==tid)];}
-function canEditDate(g,d){const u=me();if(!u||u.role!=="teacher")return false;if(g.teacherId===u.id)return true;return core.subs.some(s=>s.from===g.teacherId&&s.to===u.id&&d>=s.dFrom&&d<=s.dTo);}
+function canEditDate(g,d){const u=me();if(!u||!hasRole(u,"teacher"))return false;if(g.teacherId===u.id)return true;return core.subs.some(s=>s.from===g.teacherId&&s.to===u.id&&d>=s.dFrom&&d<=s.dTo);}
 function teacherGroups(tid,withSubs=true){const own=core.groups.filter(g=>g.teacherId===tid);if(!withSubs)return own;const subT=new Set(activeSubsTo(tid).map(s=>s.from));return [...own,...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==tid)];}
 function headClassesOf(tid){const d=TODAY();const own=core.classes.filter(c=>c.headTeacherId===tid);const sub=core.headSubs.filter(h=>h.to===tid&&d>=h.dFrom&&d<=h.dTo).map(h=>cls(h.classId)).filter(Boolean);return [...own,...sub.filter(c=>!own.includes(c))];}
 function studentGroups(sid){return core.groups.filter(g=>g.students.includes(sid));}

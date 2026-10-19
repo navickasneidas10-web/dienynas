@@ -27,11 +27,11 @@ document.addEventListener("click",async e=>{
   case"close":closeDlg();break;
   case"authTab":authUi.tab=v;authUi.err="";authUi.info="";authUi.keyInfo=null;renderAuth();break;
   case"keyReset":authUi.keyInfo=null;authUi.err="";renderAuth();break;
-  case"forgot":authUi.err="";authUi.info="Kreipkitės į mokyklos administratorių — jis nustatys laikiną slaptažodį, kurį prisijungę pasikeisite.";renderAuth();break;
-  case"wipe":if(!confirm("Ištrinti VISUS dienyno duomenis, išskyrus jūsų administratoriaus paskyrą?"))return;if(await DB.rpc("wipe_school")){await loadAll();render();toast("Duomenys ištrinti");}break;
+  case"forgot":authUi.err="";authUi.info="Kreipkitės į mokyklos direktorių — jis nustatys laikiną slaptažodį, kurį prisijungę pasikeisite.";renderAuth();break;
+  case"wipe":if(!confirm("Ištrinti VISUS dienyno duomenis, išskyrus jūsų direktoriaus paskyrą?"))return;if(await DB.rpc("wipe_school")){await loadAll();render();toast("Duomenys ištrinti");}break;
   case"exportAll":exportFile(`dienynas-${realToday()}.json`,JSON.stringify({core,users,gd,social,msgs},null,1),"application/json");break;
 
-  /* ---------- administratorius ---------- */
+  /* ---------- direktorius ---------- */
   case"classDlg":classDlg(v);break;
   case"delClass":if(classStudents(v).length){toast("Klasėje yra mokinių — pirma perkelkite arba pašalinkite juos");return;}if(!confirm("Šalinti klasę?"))return;
     core.classes=core.classes.filter(c=>c.id!==v);render();await DB.del("classes",{id:v});break;
@@ -40,7 +40,7 @@ document.addEventListener("click",async e=>{
   case"importDlg":openDlg(dlgHead("Įkelti mokinių sąrašą")+`<form data-form="importStudents"><div class="dlg-b"><p class="small muted" style="margin:0">Įklijuokite eilutes iš Excel arba įrašykite formatu <span class="mono">Vardas;Pavardė;Klasė</span>. Neegzistuojančios klasės bus sukurtos automatiškai.</p><label class="field">Sąrašas<textarea name="data" required style="min-height:220px" placeholder="Ugnė;Kazlauskaitė;8A&#10;Matas;Petrauskas;8A"></textarea></label></div><div class="dlg-f"><button type="button" class="btn" data-act="close">Atšaukti</button><button class="btn pri">Įkelti</button></div></form>`);break;
   case"newParentKey":{const s=U(v);const k={id:uid(),key:genKey(s.first,s.last,"T"),usedBy:null};if(await DB.ins("reg_keys",{id:k.id,person_id:s.id,kind:"parent",key:k.key})){s.parentKeys.push(k);render();toast("Sugeneruotas naujas tėvų raktas");}break;}
   case"teacherDlg":teacherDlg(v);break;
-  case"delTeacher":if(core.groups.some(g=>g.teacherId===v)){toast("Mokytojas turi grupių — jo pašalinti negalima");return;}if(!confirm("Šalinti mokytoją?"))return;
+  case"delTeacher":if(v===session){toast("Savęs pašalinti negalima");return;}if(core.groups.some(g=>g.teacherId===v)){toast("Mokytojas turi grupių — jo pašalinti negalima");return;}if(!confirm("Šalinti darbuotoją?"))return;
     delete users[v];core.classes.forEach(c=>{if(c.headTeacherId===v)c.headTeacherId="";});render();await DB.del("people",{id:v});break;
   case"subjectDlg":subjectDlg(v);break;
   case"delSubject":if(core.subjects.some(s=>s.parentId===v)){toast("Pirma pašalinkite šio dalyko modulius");return;}core.subjects=core.subjects.filter(s=>s.id!==v);render();await DB.del("subjects",{id:v});break;
@@ -66,7 +66,7 @@ document.addEventListener("click",async e=>{
   case"ttEdit":ttEditDlg();break;
   case"delTt":core.timetable=core.timetable.filter(t=>t.id!==v);ttEditDlg();pendingRender=true;await DB.del("timetable",{id:v});break;
   case"openLesson":if(lessonDirty&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?"))return;openLesson(el.dataset.g,el.dataset.d);break;
-  case"mtab":ui[el.dataset.k]=v;render();break;
+  case"mtab":if(!v)break;ui[el.dataset.k]=v;render();break;
   case"dTab":ui.dTab=v;render();break;
   case"ttDay":ui.ttDay=+v;render();break;
   case"hwTab":ui.hwTab=v;render();window.scrollTo(0,0);break;
@@ -171,7 +171,7 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
     busy(true);const {error}=await sb.auth.updateUser({password:S("pw")});if(error){busy(false);authUi.err=authError(error);return renderAuth();}
     await sb.rpc("clear_must_change");busy(false);authUi.step="cred";await afterAuth();toast("Slaptažodis pakeistas");break;}
   case"checkKey":{busy(true);const {data,error}=await sb.rpc("check_key",{p_key:S("key")});busy(false);authUi.err="";
-    if(error)authUi.err=error.message;else if(data.kind==="none")authUi.err="Toks raktas nerastas. Patikrinkite, ar teisingai įvedėte.";else if(data.kind==="used")authUi.err="Šis raktas jau panaudotas. Prisijunkite arba kreipkitės į administratorių.";else authUi.keyInfo={...data,key:S("key")};
+    if(error)authUi.err=error.message;else if(data.kind==="none")authUi.err="Toks raktas nerastas. Patikrinkite, ar teisingai įvedėte.";else if(data.kind==="used")authUi.err="Šis raktas jau panaudotas. Prisijunkite arba kreipkitės į direktorių.";else authUi.keyInfo={...data,key:S("key")};
     renderAuth();break;}
   case"register":{const ki=authUi.keyInfo;const login=S("login");const pe=pwProblem(S("pw"))||(S("pw")!==S("pw2")?"Slaptažodžiai nesutampa.":null)||(!/^[A-Za-z0-9._-]{3,}$/.test(login)?"Prisijungimo vardas: bent 3 lotyniškos raidės, skaičiai, taškas, brūkšnys.":null);
     if(pe){authUi.err=pe;return renderAuth();}
@@ -181,7 +181,7 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
     if(r.error){authUi.err="Registracija nepavyko: "+r.error.message;await sb.auth.signOut();return renderAuth();}
     authUi.keyInfo=null;await afterAuth();toast("Paskyra sukurta");break;}
 
-  /* ---------- administratorius ---------- */
+  /* ---------- direktorius ---------- */
   case"saveClass":{const sp=S("socialPlan");const obj={name:S("name").toUpperCase(),level:+S("level"),system:S("system"),headTeacherId:S("head"),socialPlan:sp===""?null:Math.max(0,+sp)};if(core.classes.some(c=>c.name===obj.name&&c.id!==v)){toast("Tokia klasė jau yra");return;}
     let c;if(v){c=cls(v);Object.assign(c,obj);}else{c={id:uid(),...obj};core.classes.push(c);}closeDlg();render();await DB.up("classes",R.cls(c));break;}
   case"saveStudent":{const obj={first:S("first"),last:S("last"),classId:S("classId"),email:S("email"),birth:S("birth")};closeDlg();
@@ -193,9 +193,13 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
     closeDlg();if(!rows.length){toast("Neatpažinta nė viena eilutė");return;}
     if(newCls.length&&!(await DB.ins("classes",newCls.map(R.cls))))return;if(!(await DB.bulk("people",rows)))return;
     await loadAll();render();toast(`Įkelta mokinių: ${rows.length}${newCls.length?`, sukurta klasių: ${newCls.length}`:""}`);break;}
-  case"saveTeacher":{const head=S("head");closeDlg();let id=v;
-    if(v){Object.assign(users[v],{first:S("first"),last:S("last"),email:S("email")});if(!(await DB.upd("people",R.person(users[v]),{id:v})))return;}
-    else{id=uid();if(!(await DB.ins("people",R.person({id,role:"teacher",first:S("first"),last:S("last"),email:S("email")}))))return;}
+  case"saveTeacher":{const head=S("head");const sel_=fd.getAll("roles");if(!sel_.length){toast("Pažymėkite bent vienas pareigas");return;}
+    if(v&&v===session&&!sel_.includes("admin")){toast("Negalite atimti direktoriaus pareigų pats sau");return;}
+    if(v&&core.groups.some(g=>g.teacherId===v)&&!sel_.includes("teacher")){toast("Darbuotojas turi grupių — mokytojo pareigų nuimti negalima");return;}
+    const cur=v?users[v].role:null;const primary=cur&&sel_.includes(cur)?cur:["teacher","deputy","admin"].find(r=>sel_.includes(r));const extra=sel_.filter(r=>r!==primary);
+    closeDlg();let id=v;
+    if(v){Object.assign(users[v],{first:S("first"),last:S("last"),email:S("email"),role:primary,roles:extra});if(!(await DB.upd("people",R.person(users[v]),{id:v})))return;}
+    else{id=uid();if(!(await DB.ins("people",R.person({id,role:primary,roles:extra,first:S("first"),last:S("last"),email:S("email")}))))return;}
     const ops=[];core.classes.forEach(c=>{if(c.headTeacherId===id&&c.id!==head){c.headTeacherId="";ops.push(DB.upd("classes",{head_teacher_id:null},{id:c.id}));}});
     if(head)ops.push(DB.upd("classes",{head_teacher_id:id},{id:head}));await Promise.all(ops);await loadAll();render();break;}
   case"saveSubject":{const kind=S("kind");if(kind==="modulis"&&!S("parentId")){toast("Moduliui nurodykite pagrindinį dalyką");return;}const obj={name:S("name"),kind,parentId:kind==="modulis"?S("parentId"):"",code:S("code")};
@@ -212,7 +216,7 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
   case"addSub":{if(S("from")===S("to")){toast("Mokytojas negali vaduoti pats savęs");return;}if(S("dTo")<S("dFrom")){toast("Neteisingos datos");return;}const x={id:uid(),from:S("from"),to:S("to"),dFrom:S("dFrom"),dTo:S("dTo")};core.subs.push(x);render();await DB.ins("subs",R.sub(x));break;}
   case"addHeadSub":{if(S("dTo")<S("dFrom")){toast("Neteisingos datos");return;}const x={id:uid(),classId:S("classId"),to:S("to"),dFrom:S("dFrom"),dTo:S("dTo")};core.headSubs.push(x);render();await DB.ins("head_subs",R.hsub(x));break;}
   case"addAdmin":{const id=uid();if(!(await DB.ins("people",R.person({id,role:"admin",first:S("first"),last:S("last")}))))return;await loadAll();render();
-    openDlg(dlgHead("Administratorius sukurtas")+`<div class="dlg-b">Darbuotojo raktas registracijai: <div class="formula mono">${esc(users[id]&&users[id].key||"—")}</div></div><div class="dlg-f"><button class="btn pri" data-act="close">Gerai</button></div>`);break;}
+    openDlg(dlgHead("Direktorius sukurtas")+`<div class="dlg-b">Darbuotojo raktas registracijai: <div class="formula mono">${esc(users[id]&&users[id].key||"—")}</div></div><div class="dlg-f"><button class="btn pri" data-act="close">Gerai</button></div>`);break;}
 
   /* ---------- mokytojas ---------- */
   case"addTt":{const t={id:uid(),g:S("g"),wd:+S("wd"),no:+S("no"),from:S("from"),weeks:S("valid")==="weeks"?+S("weeks")||1:null,parity:S("parity")};core.timetable.push(t);ttEditDlg();pendingRender=true;if(await DB.ins("timetable",R.tt(t)))toast("Pamoka pridėta į tvarkaraštį");break;}

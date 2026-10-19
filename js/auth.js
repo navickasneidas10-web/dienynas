@@ -8,21 +8,21 @@ function authCard(){
   if(authUi.dbError&&!authUser)return `<h2 style="margin-top:0">Nepavyko prisijungti prie duomenų bazės</h2><div class="note bad">${esc(authUi.dbError)}</div><p class="small muted">Patikrinkite <span class="mono">js/config.js</span> reikšmes ir ar paleistas SQL failas iš <span class="mono">supabase/migrations</span>.</p>`;
   if(authUi.step==="otp")return `<h2 style="margin-top:0">Dviejų faktorių patvirtinimas</h2><p class="small muted">Įveskite 6 skaitmenų kodą iš autentifikavimo programėlės.</p>
     <form data-form="otp"><label class="field">Kodas<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required autofocus></label>${err}<button class="btn pri" ${busy}>Patvirtinti</button><button type="button" class="btn" data-act="logout">Atsijungti</button></form>`;
-  if(authUi.step==="change"||(me()&&me().mustChange))return `<h2 style="margin-top:0">Pasikeiskite slaptažodį</h2><p class="small muted">Administratorius nustatė laikiną slaptažodį. Sugalvokite naują.</p>
+  if(authUi.step==="change"||(me()&&me().mustChange))return `<h2 style="margin-top:0">Pasikeiskite slaptažodį</h2><p class="small muted">Direktorius nustatė laikiną slaptažodį. Sugalvokite naują.</p>
     <form data-form="forceChange"><label class="field">Naujas slaptažodis<input name="pw" type="password" required autocomplete="new-password"></label><label class="field">Pakartokite<input name="pw2" type="password" required autocomplete="new-password"></label>${err}<button class="btn pri" ${busy}>Išsaugoti ir tęsti</button></form>`;
-  if(authUi.step==="unlinked")return `<h2 style="margin-top:0">Paskyra nesusieta</h2><p>Esate prisijungę, bet ši paskyra nesusieta su jokiu dienyno asmeniu (pvz., administratorius panaikino registraciją arba asmenį). Kreipkitės į mokyklos administratorių.</p><button class="btn" data-act="logout">Atsijungti</button>`;
-  if(authUi.needsSetup)return `<h2 style="margin-top:0">Pirmasis paleidimas</h2><p class="small muted">Duomenų bazėje dar nėra administratoriaus. Sukurkite mokyklos administratoriaus paskyrą — kiti naudotojai registruosis su raktais, kuriuos jis išduos.</p>
+  if(authUi.step==="unlinked")return `<h2 style="margin-top:0">Paskyra nesusieta</h2><p>Esate prisijungę, bet ši paskyra nesusieta su jokiu dienyno asmeniu (pvz., direktorius panaikino registraciją arba asmenį). Kreipkitės į mokyklos direktorių.</p><button class="btn" data-act="logout">Atsijungti</button>`;
+  if(authUi.needsSetup)return `<h2 style="margin-top:0">Pirmasis paleidimas</h2><p class="small muted">Duomenų bazėje dar nėra direktoriaus. Sukurkite mokyklos direktoriaus paskyrą — kiti naudotojai registruosis su raktais, kuriuos jis išduos.</p>
     <form data-form="setup"><label class="field">Mokyklos pavadinimas<input name="school" required value="${esc(core.settings.school)}"></label>
     <div class="row"><label class="field" style="flex:1">Vardas<input name="first" required></label><label class="field" style="flex:1">Pavardė<input name="last" required></label></div>
     <label class="field">Prisijungimo vardas<input name="login" required autocomplete="username" pattern="[A-Za-z0-9._\\-]{3,}"></label>
     <label class="field">Slaptažodis<input name="pw" type="password" required autocomplete="new-password"></label>
-    ${err}<button class="btn pri" ${busy}>${authUi.busy?'<span class="spin"></span>':''}Sukurti administratorių</button></form>`;
+    ${err}<button class="btn pri" ${busy}>${authUi.busy?'<span class="spin"></span>':''}Sukurti direktorių</button></form>`;
   const tabs=`<div class="tabs" role="tablist"><button role="tab" aria-selected="${authUi.tab==="login"}" data-act="authTab" data-v="login">Prisijungti</button><button role="tab" aria-selected="${authUi.tab==="register"}" data-act="authTab" data-v="register">Registracija</button></div>`;
   if(authUi.tab==="login")return tabs+`<form data-form="login"><label class="field">Prisijungimo vardas<input name="login" required autocomplete="username" id="lgLogin"></label>
     <label class="field">Slaptažodis<input name="pw" type="password" required autocomplete="current-password" id="lgPw"></label>${err}${info}
     <button class="btn pri" ${busy}>${authUi.busy?'<span class="spin"></span>':''}Prisijungti</button><button type="button" class="btn" data-act="forgot">Pamiršote prisijungimo duomenis?</button></form>`;
   const ki=authUi.keyInfo;
-  return tabs+`<p class="small muted" style="margin-top:0">Registracijos raktą (darbuotojo, mokinio arba tėvų) išduoda mokyklos administratorius arba klasės vadovas.</p>
+  return tabs+`<p class="small muted" style="margin-top:0">Registracijos raktą (darbuotojo, mokinio arba tėvų) išduoda mokyklos direktorius arba klasės vadovas.</p>
     <form data-form="${ki?"register":"checkKey"}"><label class="field">Raktas<input name="key" class="mono" required value="${esc(ki?ki.key:"")}" ${ki?"readonly":""} placeholder="vardpavaM1a2b3c4d5e6"></label>
     ${ki?`<div class="note info">${ki.kind==="parent"?`Tėvų paskyra mokiniui <b>${esc(ki.first+" "+ki.last)}</b>${ki.class?` (${esc(ki.class)})`:""}`:`${ROLE_NAME[ki.role]}: <b>${esc(ki.first+" "+ki.last)}</b>${ki.class?` (${esc(ki.class)})`:""}`}</div>
       ${ki.kind==="parent"?`<div class="row"><label class="field" style="flex:1">Jūsų vardas<input name="first" required></label><label class="field" style="flex:1">Pavardė<input name="last" required></label></div>`:""}
@@ -62,12 +62,15 @@ async function logout(){unsubscribeRealtime();await sb.auth.signOut();authUser=n
 
 /* ================= Karkasas ================= */
 function menuFor(u){
-  if(u.role==="admin")return[["Mokykla",[["a_home","Pradžia"],["a_classes","Klasės"],["a_students","Mokiniai"],["a_teachers","Mokytojai"],["a_subjects","Dalykai"]]],
-    ["Nustatymai",[["a_periods","Laikotarpiai"],["a_status","Vertinimo būsenos"],["a_evalsys","Vertinimo sistemos"],["a_subs","Pavadavimai"],["a_tt","Mokytojų tvarkaraščiai"]]],
-    ["Ataskaitinės veiklos",[["a_reports","Ataskaitos"],["a_studrep","Mokinio ataskaita"],["a_users","Naudotojai"],["a_data","Duomenys"]]],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
-  if(u.role==="teacher"){const m=[["Mano dienynas",[["t_tt","Tvarkaraštis"],["t_journal","Pamokos"],["t_grid","Žurnalas"],["t_groups","Grupės"],["t_plans","Pamokų teminiai planai"],["t_works","Atsiskaitomieji darbai"],["t_soc","Socialinė-pilietinė veikla"],["t_subs","Pavadavimai"]]],["Ataskaitinės veiklos",[["t_periods","Trimestrai / pusmečiai"]]]];
-    if(headClassesOf(u.id).length)m.push(["Klasės vadovui",[["h_just","N pateisinimas"],["h_summary","Klasės suvestinė"],["h_studrep","Mokinio ataskaita"],["h_keys","Tėvų raktai"],["h_soc","Soc.-pilietinės veiklos ataskaita"]]]);
-    m.push(["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]);return m;}
+  const acc=["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]];
+  if(isStaff(u)){const m=[];
+    if(hasRole(u,"admin"))m.push(["Mokykla",[["a_home","Pradžia"],["a_classes","Klasės"],["a_students","Mokiniai"],["a_teachers","Darbuotojai"],["a_subjects","Dalykai"]]],
+      ["Nustatymai",[["a_periods","Laikotarpiai"],["a_status","Vertinimo būsenos"],["a_evalsys","Vertinimo sistemos"],["a_subs","Pavadavimai"],["a_tt","Mokytojų tvarkaraščiai"]]],
+      ["Ataskaitinės veiklos",[["a_reports","Ataskaitos"],["a_studrep","Mokinio ataskaita"],["a_users","Naudotojai"],["a_data","Duomenys"]]]);
+    else if(hasRole(u,"deputy"))m.push(["Direktoriaus pavaduotojui",[["a_reports","Ataskaitos"],["a_studrep","Mokinio ataskaita"],["a_tt","Mokytojų tvarkaraščiai"],["a_subs","Pavadavimai"]]]);
+    if(hasRole(u,"teacher")){m.push(["Mano dienynas",[["t_tt","Tvarkaraštis"],["t_journal","Pamokos"],["t_grid","Žurnalas"],["t_groups","Grupės"],["t_plans","Pamokų teminiai planai"],["t_works","Atsiskaitomieji darbai"],["t_soc","Socialinė-pilietinė veikla"],["t_subs","Pavadavimai"]]],["Mokytojo ataskaitos",[["t_periods","Trimestrai / pusmečiai"]]]);
+      if(headClassesOf(u.id).length)m.push(["Klasės vadovui",[["h_just","N pateisinimas"],["h_summary","Klasės suvestinė"],["h_studrep","Mokinio ataskaita"],["h_keys","Tėvų raktai"],["h_soc","Soc.-pilietinės veiklos ataskaita"]]]);}
+    m.push(acc);return m;}
   const base=[["s_events","Naujausi įvykiai"],["s_diary","Dienynas"],["s_tt","Tvarkaraštis"],["s_lessons","Pamokos"],["s_hw","Namų darbai"],["s_works","Atsiskaitomieji darbai"],["s_att","Lankomumas"],["s_notes","Pagyrimai / pastabos"],["s_periods","Trimestrai / pusmečiai"],["s_soc","Socialinė-pilietinė veikla"]];
   if(u.role==="parent")return[["Vaiko dienynas",base],["Tėvams",[["p_child","Vaiko duomenys"],["p_add","Pridėti vaiką"]]],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
   return[["Mano dienynas",base],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
@@ -79,8 +82,8 @@ function render(){
   const u=me();if(!u||authUi.step!=="cred"||u.mustChange){renderAuth();return;}
   const menu=menuFor(u);const all=menu.flatMap(s=>s[1].map(x=>x[0]));if(!all.includes(ui.view))ui.view=all[0];
   const un=unread(u);
-  let who=`<b>${esc(u.first)} ${esc(u.last)}</b>${ROLE_NAME[u.role]}${u.role==="student"?` · ${esc(clsName(u.classId))}`:""}`;
-  if(u.role==="teacher"){const hc=headClassesOf(u.id);if(hc.length)who+=` · kl. vadovas ${hc.map(c=>esc(c.name)).join(", ")}`;}
+  let who=`<b>${esc(u.first)} ${esc(u.last)}</b>${roleNames(u)}${u.role==="student"?` · ${esc(clsName(u.classId))}`:""}`;
+  if(hasRole(u,"teacher")){const hc=headClassesOf(u.id);if(hc.length)who+=` · kl. vadovas ${hc.map(c=>esc(c.name)).join(", ")}`;}
   if(u.role==="parent"){const kids=(u.childIds||[]).filter(id=>U(id));viewedStudent();who+=kids.length>1?`<select data-ch="child" aria-label="Vaikas">${kids.map(k=>`<option value="${k}" ${k===ui.child?"selected":""}>${esc(uNameFL(k))} (${esc(clsName(U(k).classId))})</option>`).join("")}</select>`:kids.length?`<div class="small" style="opacity:.8;margin-top:2px">Vaikas: ${esc(uNameFL(kids[0]))}</div>`:"";}
   $("#root").innerHTML=`<div class="app${u.role==="student"||u.role==="parent"?" fam":""}">
    <header class="topbar"><button class="tb-burger" data-act="menuOpen" aria-label="Atidaryti meniu">${ICON.burger}</button><div class="tb-brand">Dienynas</div><span class="tb-sp"></span>
@@ -107,4 +110,4 @@ function ensureIn(key,list,fallback){if(!list.some(x=>x[0]===ui[key]))ui[key]=fa
 function periodOpts(sys,withY){const o=periodsSys(sys).map(p=>[p.id,p.name]);if(withY)o.push(["Y","Visi metai"]);return o;}
 function curPeriod(sys){const t=TODAY();const ps=periodsSys(sys);return(ps.find(p=>t>=p.from&&t<=p.to)||ps[ps.length-1]).id;}
 function progTag(g,sid){const p=(g.programs||{})[sid];return p?`<span class="tag i" title="${p==="I"?"Individualizuota programa":"Pritaikyta programa"}">${p}</span>`:"";}
-const gLabel=g=>`${g.name}${g.teacherId!==(me()||{}).id&&me()&&me().role==="teacher"?" (pavadavimas)":""}`;
+const gLabel=g=>`${g.name}${g.teacherId!==(me()||{}).id&&me()&&hasRole(me(),"teacher")?" (pavadavimas)":""}`;
