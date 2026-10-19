@@ -112,7 +112,7 @@ const VLABEL={neat:"neat.",isk:"įsk.",neisk:"neįsk.",atl:"atl.",pp:"pp.",np:"n
 const VTITLE={neat:"Neatsiskaitė",isk:"Įskaityta",neisk:"Neįskaityta",atl:"Atliko",pp:"Padarė pažangą",np:"Nepadarė pažangos"};
 const GRADE_VALUES=["1","2","3","4","5","6","7","8","9","10","isk","neisk","atl","pp","np","neat"];
 /* Pažymiai rodomi paprastu tekstu; raudonai — tik už kontrolinį darbą */
-function gClass(v,t){return "";}
+function gClass(v,t){return t==="KD"?"kd":"";}
 function chip(g,title=true){const t=title&&g.d?` title="${esc(g.d)} · ${esc(TYPE_NAME[g.t]||g.t||"")}${g.c?" · "+esc(g.c):""}"`:"";return `<span class="g ${gClass(g.v,g.t)}"${t}>${VLABEL[g.v]??g.v}</span>`;}
 const vchip=v=>v==null?'<span class="muted">—</span>':chip({v},false);
 function sGrades(gid,sid,pid){return G(gid).grades.filter(g=>g.s===sid&&inPeriod(g.d,pid)).sort((a,b)=>lsort(a.d,b.d));}

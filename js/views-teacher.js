@@ -10,11 +10,11 @@ function weekSlots(gids,dateOk){const mon=mondayOf(ui.week||TODAY());const fri=a
 function weekGrid(gids,opt={}){const{mon,slots,maxNo}=weekSlots(gids,opt.dateOk);const t=TODAY();const u=me();
   let h=`<div class="scroll"><div class="week"><div></div>${[0,1,2,3,4].map(i=>{const d=addDays(mon,i);return `<div class="wh ${d===t?"today":""}">${WDL[i]} <span class="muted">${fmtD(d)}</span>${isHoliday(d)?' <span class="tag">laisva</span>':""}</div>`;}).join("")}`;
   for(let no=1;no<=maxNo;no++){h+=`<div class="no">${no}</div>`;for(let i=0;i<5;i++){const d=addDays(mon,i);const list=slots[no+"|"+d]||[];
-    h+=`<div class="slot ${list.length?"":"empty"}">${list.map(x=>{const g=grp(x.gid);const l=G(x.gid).lessons.find(y=>y.d===x.d);const kd=l&&l.t?tStyle(l.t):"";
+    h+=`<div class="slot ${list.length?"":"empty"}">${list.map(x=>{const g=grp(x.gid);const l=G(x.gid).lessons.find(y=>y.d===x.d);const kd=l&&l.t?tStyle(l.t):"";const kdc=l&&["KD","TA","SD"].includes(l.t)?"kd":"";
       if(opt.sid){const gs=G(x.gid).grades.filter(y=>y.s===opt.sid&&y.d===x.d);const a=G(x.gid).att.find(y=>y.s===opt.sid&&y.d===x.d);
-        return `<button class="lsn ${kd?"typed":""}"${kd} data-act="stuLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(subjName(g.subjectId))}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}${l&&l.t?` <span class="tag bad">${l.t}</span>`:""}<div class="chips" style="margin-top:2px">${gs.map(y=>chip(y)).join("")}${a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}">${a.m==="pv"?"p":a.j||"n"}</span>`:""}</div>${l&&l.hw?`<span class="small">ND: ${esc(l.hw)}</span>`:""}</button>`;}
+        return `<button class="lsn ${kdc} ${kd?"typed":""}"${kd} data-act="stuLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(subjName(g.subjectId))}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}${l&&l.t?` <span class="tag bad">${l.t}</span>`:""}<div class="chips" style="margin-top:2px">${gs.map(y=>chip(y)).join("")}${a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}">${a.m==="pv"?"p":a.j||"n"}</span>`:""}</div>${l&&l.hw?`<span class="small">ND: ${esc(l.hw)}</span>`:""}</button>`;}
       const sub=u&&u.role==="teacher"&&g.teacherId!==u.id;
-      return opt.ro?`<div class="lsn"><b>${esc(g.name)}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}</div>`:`<button class="lsn ${kd?"typed":""} ${sub?"sub":""}"${kd} data-act="openLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(g.name)}</b>${sub?`<span class="small">vaduojate: ${esc(uNameFL(g.teacherId))}</span>`:""}${l&&l.topic?`<span>${esc(l.topic)}</span>`:'<span class="muted">tema neįvesta</span>'}</button>`;}).join("")}</div>`;}}
+      return opt.ro?`<div class="lsn"><b>${esc(g.name)}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}</div>`:`<button class="lsn ${kdc} ${kd?"typed":""} ${sub?"sub":""}"${kd} data-act="openLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(g.name)}</b>${sub?`<span class="small">vaduojate: ${esc(uNameFL(g.teacherId))}</span>`:""}${l&&l.topic?`<span>${esc(l.topic)}</span>`:'<span class="muted">tema neįvesta</span>'}</button>`;}).join("")}</div>`;}}
   return h+`</div></div>`;}
 
 /* ================= MOKYTOJAS ================= */
@@ -47,7 +47,7 @@ VIEWS.t_grid=u=>{
   if(!g)return `<h1>Žurnalas</h1><div class="sheet empty">Grupių dar nėra. <button class="btn" data-act="view" data-v="t_groups">Sukurti grupę</button></div>`;
   const pOpts=periodOpts(sysOfGroup(g));ensureIn("pid",pOpts,curPeriod(sysOfGroup(g)));const pid=ui.pid;const d=G(g.id);const dates=journalDates(g,pid,true);
   const sids=[...g.students].sort(byName);const isk=(g.evalSys||"10")==="isk";
-  const head=dates.map(dt=>{const l=d.lessons.find(x=>x.d===dt);const t=l&&l.t;const ro=!canEditDate(g,dt);return `<th class="d ${t?"typed":""} ${ro?"ro":""}"${t?tStyle(t):""} data-act="${ro?"roCell":"openLesson"}" data-g="${g.id}" data-d="${dt}" title="${esc(l&&l.topic||"Pamoka")}${t?" · "+esc(TYPE_NAME[t]):""}${l&&l.hw?" · ND: "+esc(l.hw):""}">${fmtD(dt)}<small>${t||(l&&l.hw?"ND":"&nbsp;")}</small></th>`;}).join("");
+  const head=dates.map(dt=>{const l=d.lessons.find(x=>x.d===dt);const t=l&&l.t;const ro=!canEditDate(g,dt);return `<th class="d ${t==="KD"?"kd":""} ${t?"typed":""} ${ro?"ro":""}"${t?tStyle(t):""} data-act="${ro?"roCell":"openLesson"}" data-g="${g.id}" data-d="${dt}" title="${esc(l&&l.topic||"Pamoka")}${t?" · "+esc(TYPE_NAME[t]):""}${l&&l.hw?" · ND: "+esc(l.hw):""}">${fmtD(dt)}<small>${t||(l&&l.hw?"ND":"&nbsp;")}</small></th>`;}).join("");
   const rows=sids.map(sid=>{const cells=dates.map(dt=>{const gg=d.grades.filter(x=>x.s===sid&&x.d===dt);const a=d.att.find(x=>x.s===sid&&x.d===dt);const nt=d.notes.filter(x=>x.s===sid&&x.d===dt);const ro=!canEditDate(g,dt);
       const at=a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}" title="${a.m==="pv"?"Pavėlavo":a.j?esc(JUST_NAME[a.j]):"Nepateisinta"}">${a.m==="pv"?"p":a.j||"n"}</span>`:"";
       return `<td class="c ${ro?"ro":""}" data-act="${ro?"roCell":"cell"}" data-s="${sid}" data-d="${dt}"><div class="cellw">${gg.map(x=>chip(x)).join("")}${at}${nt.map(n=>`<span class="nt" title="${esc(n.text)}">${NOTE_ICON[n.kind]||""}</span>`).join("")}</div></td>`;}).join("");
@@ -115,7 +115,7 @@ VIEWS.t_journal=u=>{
      <div><span class="muted small">Grupė</span><b>${esc(g.name)}</b></div>
      <div><span class="muted small">Dalykas</span><b>${esc(subjName(g.subjectId))}</b></div>
      <div><span class="muted small">Mokytojas</span><b>${esc(uNameFL(g.teacherId))}</b>${g.teacherId!==u.id?'<span class="tag i">vaduojate</span>':""}</div>
-     <div><span class="muted small">Pamokos tipas</span><b class="${l.t?"tname":""}"${l.t?tStyle(l.t):""}>${l.t?esc(TYPE_NAME[l.t]):"Įprasta pamoka"}</b></div>
+     <div><span class="muted small">Pamokos tipas</span><b class="${l.t==="KD"?"kdtxt":""} ${l.t?"tname":""}"${l.t?tStyle(l.t):""}>${l.t?esc(TYPE_NAME[l.t]):"Įprasta pamoka"}</b></div>
      <div><span class="muted small">Mokinių</span><b>${g.students.length}</b></div>
      ${ro?'<div><span class="tag">tik peržiūra</span></div>':`<div class="li-act"><button type="button" class="btn warn sm" data-act="delLesson" data-g="${g.id}" data-v="${dt}" ${cnt?`disabled title="Pirma ištrinkite šios pamokos įrašus (${cnt})"`:""}>Ištrinti pamoką</button></div>`}
    </div>`;
@@ -131,7 +131,7 @@ VIEWS.t_journal=u=>{
 function lessonInfoForm(g,l,dt,ro){const plan=core.plans.find(x=>x.id===g.planId);const dis=ro?"disabled":"";const cur=l.t||"";
   return `<form data-form="saveLesson" data-g="${g.id}" data-d="${dt}" class="lesson-form">
    <fieldset class="ltype"><legend>Pamokos tipas</legend>
-    ${[["","Įprasta pamoka"],...WORK_TYPES].map(([k,n])=>`<label class="ltype-opt"${k?tStyle(k):""}><input type="radio" name="t" value="${k}" ${k===cur?"checked":""} ${dis}> ${n}</label>`).join("")}
+    ${[["","Įprasta pamoka"],...WORK_TYPES].map(([k,n])=>`<label class="ltype-opt ${k==="KD"?"kd":""}"${k?tStyle(k):""}><input type="radio" name="t" value="${k}" ${k===cur?"checked":""} ${dis}> ${n}</label>`).join("")}
     <div class="small muted" style="flex-basis:100%">Pažymėjus atsiskaitomąjį darbą, mokiniai jį matys skiltyje „Atsiskaitomieji darbai“, o įvertinimų tipas bus parinktas automatiškai.</div>
    </fieldset>
    <label class="field">Tema<input name="topic" value="${esc(l.topic||"")}" list="planTopics" ${dis} placeholder="Pamokos tema"></label><datalist id="planTopics">${plan?plan.topics.map(t=>`<option value="${esc(t)}">`).join(""):""}</datalist>

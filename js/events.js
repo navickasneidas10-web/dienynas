@@ -71,7 +71,6 @@ document.addEventListener("click",async e=>{
   case"ttDay":ui.ttDay=+v;render();break;
   case"hwTab":ui.hwTab=v;render();window.scrollTo(0,0);break;
   case"wMonth":if(v){ui.wMonth=v;render();}break;
-  case"diaryFilter":{const sid=viewedStudent();const have=new Set();studentGroups(sid).forEach(g=>{const D=G(g.id);D.grades.forEach(x=>{if(x.s===sid)have.add(x.d.slice(0,7));});D.att.forEach(x=>{if(x.s===sid)have.add(x.d.slice(0,7));});});filterSheet("dMonth",sid,have);break;}
   case"stPer":ui.stPer=v;render();break;
   case"repStuMove":{const ss=classStudents(ui.repStuCls);const i=ss.findIndex(s=>s.id===ui.repStu)+ +v;if(ss[i]){ui.repStu=ss[i].id;render();}break;}
   case"ltab":if(lessonDirty&&v!=="pamoka"&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?"))return;if(v!=="pamoka")lessonDirty=false;ui.ltab=v;render();break;
@@ -154,7 +153,6 @@ document.addEventListener("click",async e=>{
 });
 
 document.addEventListener("submit",async e=>{const f=e.target.closest("form[data-form]");if(!f)return;e.preventDefault();const fd=new FormData(f);const k=f.dataset.form,v=f.dataset.v;const u=me();const S=n=>(fd.get(n)||"").toString().trim();
-  if(k==="diaryFilter"){const m=S("m"),sb=S("s");if(m)ui[f.dataset.k]=m;if(sb)ui.dSubj=sb;closeDlg();render();window.scrollTo(0,0);return;}
   const busy=on=>{authUi.busy=on;if(!me()||authUi.step!=="cred")renderAuth();};
   switch(k){
   /* ---------- prisijungimas ---------- */
