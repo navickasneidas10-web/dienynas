@@ -1,9 +1,30 @@
 /* Dienynas — konstantos, būsena ir skaičiavimai */
 /* ================= Konstantos ================= */
+/* Pamokų laikas (skambučiai). Administratorius gali pakeisti skiltyje „Laikotarpiai“ */
+const DEFAULT_BELLS=[["08:00","08:45"],["08:55","09:40"],["09:50","10:35"],["10:55","11:40"],["12:00","12:45"],["12:55","13:40"],["13:50","14:35"],["14:45","15:30"],["15:40","16:25"]];
+const bellOf=no=>{const b=(core.settings.bells||DEFAULT_BELLS)[(+no||0)-1];return b&&b[0]&&b[1]?b:null;};
+const MONTHS_GEN=["sausio","vasario","kovo","balandžio","gegužės","birželio","liepos","rugpjūčio","rugsėjo","spalio","lapkričio","gruodžio"];
+const WD_FULL=["Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktadienis","Šeštadienis","Sekmadienis"];
+const dayGen=d=>`${MONTHS_GEN[+d.slice(5,7)-1]} ${d.slice(8)} d.`;
+const ICON={
+ burger:'<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M3 6h18v2.2H3zm0 5h18v2.2H3zm0 5h18v2.2H3z"/></svg>',
+ user:'<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><circle cx="12" cy="8" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.8 21c.6-4.3 4-6.6 8.2-6.6s7.6 2.3 8.2 6.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+ mail:'<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 6l9 7 9-7" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+ hw:'<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="9" y="2.5" width="6" height="3" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 10h8M8 13.5h8M8 17h5" stroke="currentColor" stroke-width="1.6"/></svg>',
+ note:'<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="currentColor" d="M4 3h16a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 17H8l-4.5 4V4.5A1.5 1.5 0 0 1 4 3z"/><path d="M7.5 7.5h9M7.5 10.5h9M7.5 13.5h6" stroke="#fff" stroke-width="1.5"/></svg>',
+ chev:'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ chevL:'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ close:'<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+};
 /* Pažymių tipai (kodai suderinami su jau įrašytais pažymiais) */
-const TYPES=[["KL","Klasės darbas"],["PR","Praktinis darbas"],["KD","Kontrolinis darbas"],["PP","Paprastas"],["SD","Savarankiškas darbas"],["ND","Namų darbas"],["TD","Teorinis darbas"],["TA","Testas"],["KP","Kaupiamasis"],["KM","Pažymys iš kitos įstaigos"],["PJ","Projektinis darbas"],["RS","Rašinys"]];
+const TYPES=[["KL","Klasės darbas"],["PR","Praktinis darbas"],["KD","Kontrolinis darbas"],["PP","Paprastas"],["SD","Savarankiškas darbas"],["ND","Namų darbas"],["TD","Teorinis darbas"],["IS","Įskaita"],["TA","Testas"],["KP","Kaupiamasis"],["KM","Pažymys iš kitos įstaigos"],["PJ","Projektinis darbas"],["RS","Rašinys"]];
+/* Pažymių tipų spalvos — rodomos tik kaip juosta šone */
+const TYPE_COLOR={KL:"#008080",PR:"#FF00FF",KD:"#FF0000",PP:"#666666",SD:"#800000",ND:"#0000FF",TD:"#808000",IS:"#00FF00",TA:"#6B4423",KP:"#00FFFF",KM:"#333333",PJ:"#0D2B52",RS:"#8EA9DB"};
+const tc=t=>TYPE_COLOR[t]||TYPE_COLOR.KL;
+const tStyle=t=>` style="--tc:${tc(t)}"`;
+const typeLegend=()=>`<div class="tlegend"><b>Pažymių spalvos</b><div>${TYPES.map(([k,n])=>`<span><i style="background:${tc(k)}"></i>${n}</span>`).join("")}</div></div>`;
 const TYPE_NAME=Object.fromEntries(TYPES);
-const WORK_TYPES=TYPES.filter(([k])=>["KD","SD","PR","TD","TA","PJ","RS"].includes(k));
+const WORK_TYPES=TYPES.filter(([k])=>["KD","SD","PR","TD","IS","TA","PJ","RS"].includes(k));
 const JUST=[["nt","Pateisinta tėvų (dėl ligos)"],["np","Pateisinta (kita priežastis)"],["nl","Pateisinta (dėl ligos)"],["nk","Pateisinta tėvų (ne dėl ligos)"],["ns","Pateisinta (direktoriaus įsakymu)"],["nv","Pateisinta (varžybos, olimpiados)"]];
 const JUST_NAME=Object.fromEntries(JUST);
 const KINDS={klase:"Mokomojo dalyko grupė",pogrupis:"Pogrupis (mobilioji grupė)",srautas:"Srautas"};
@@ -19,7 +40,7 @@ const EVAL_SYS={"10":"Dešimtbalė sistema",isk:"Vertinimas įskaita"};
 function defaultPeriodDates(y){return{
   P1:{from:`${y}-09-01`,to:`${y+1}-01-31`,active:false},P2:{from:`${y+1}-02-01`,to:`${y+1}-06-30`,active:false},
   T1:{from:`${y}-09-01`,to:`${y}-11-30`,active:false},T2:{from:`${y}-12-01`,to:`${y+1}-03-31`,active:false},T3:{from:`${y+1}-04-01`,to:`${y+1}-06-30`,active:false}};}
-function emptyCore(){const y=2026;return{v:2,settings:{school:"Mokykla",system:"pusm",yearStart:y,rounding:0.5,periods:defaultPeriodDates(y),holidays:[],demo:false},
+function emptyCore(){const y=2026;return{v:2,settings:{school:"Mokykla",system:"pusm",yearStart:y,rounding:0.5,periods:defaultPeriodDates(y),holidays:[],bells:DEFAULT_BELLS.slice(),demo:false},
   classes:[],subjects:[],groups:[],timetable:[],works:[],prejust:[],subs:[],headSubs:[],plans:[]};}
 
 /* ================= Būsena ================= */
@@ -28,7 +49,7 @@ let ready=false, dialogOpen=false, pendingRender=false;
 let session=null;      // prisijungusio asmens (people.id) identifikatorius
 let authUser=null;     // Supabase Auth naudotojas
 let mfa={enabled:false,factorId:null};
-const ui={repStuCls:null,repStu:null,dMonth:null,dTab:"days",lMonth:null,stPer:null,ltab:"pamoka",view:null,gid:null,pid:null,lpid:null,cls:null,sid:null,month:null,week:null,child:null,stPid:null,tab:null,repCls:null,repPid:null,rep:"keys",msgTab:"in",ttTeacher:null,evalCls:null,subTab:"t"};
+const ui={ttDay:null,wMonth:null,hwTab:"next",dSubj:"*",repStuCls:null,repStu:null,dMonth:null,dTab:"days",lMonth:null,stPer:null,ltab:"pamoka",view:null,gid:null,pid:null,lpid:null,cls:null,sid:null,month:null,week:null,child:null,stPid:null,tab:null,repCls:null,repPid:null,rep:"keys",msgTab:"in",ttTeacher:null,evalCls:null,subTab:"t"};
 const authUi={tab:"login",step:"cred",err:"",keyInfo:null,info:"",busy:false,needsSetup:false};
 
 const $=s=>document.querySelector(s);
@@ -91,7 +112,7 @@ const VLABEL={neat:"neat.",isk:"įsk.",neisk:"neįsk.",atl:"atl.",pp:"pp.",np:"n
 const VTITLE={neat:"Neatsiskaitė",isk:"Įskaityta",neisk:"Neįskaityta",atl:"Atliko",pp:"Padarė pažangą",np:"Nepadarė pažangos"};
 const GRADE_VALUES=["1","2","3","4","5","6","7","8","9","10","isk","neisk","atl","pp","np","neat"];
 /* Pažymiai rodomi paprastu tekstu; raudonai — tik už kontrolinį darbą */
-function gClass(v,t){return t==="KD"?"kd":"";}
+function gClass(v,t){return "";}
 function chip(g,title=true){const t=title&&g.d?` title="${esc(g.d)} · ${esc(TYPE_NAME[g.t]||g.t||"")}${g.c?" · "+esc(g.c):""}"`:"";return `<span class="g ${gClass(g.v,g.t)}"${t}>${VLABEL[g.v]??g.v}</span>`;}
 const vchip=v=>v==null?'<span class="muted">—</span>':chip({v},false);
 function sGrades(gid,sid,pid){return G(gid).grades.filter(g=>g.s===sid&&inPeriod(g.d,pid)).sort((a,b)=>lsort(a.d,b.d));}
