@@ -68,7 +68,7 @@ function menuFor(u){
   if(u.role==="teacher"){const m=[["Mano dienynas",[["t_tt","Tvarkaraštis"],["t_journal","Pamokos"],["t_grid","Žurnalas"],["t_groups","Grupės"],["t_plans","Pamokų teminiai planai"],["t_works","Atsiskaitomieji darbai"],["t_soc","Socialinė-pilietinė veikla"],["t_subs","Pavadavimai"]]],["Ataskaitinės veiklos",[["t_periods","Trimestrai / pusmečiai"]]]];
     if(headClassesOf(u.id).length)m.push(["Klasės vadovui",[["h_just","N pateisinimas"],["h_summary","Klasės suvestinė"],["h_studrep","Mokinio ataskaita"],["h_keys","Tėvų raktai"],["h_soc","Soc.-pilietinės veiklos ataskaita"]]]);
     m.push(["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]);return m;}
-  const base=[["s_diary","Dienynas"],["s_tt","Tvarkaraštis"],["s_lessons","Pamokos"],["s_hw","Namų darbai"],["s_works","Atsiskaitomieji darbai"],["s_att","Lankomumas"],["s_notes","Pagyrimai / pastabos"],["s_periods","Trimestrai / pusmečiai"],["s_soc","Socialinė-pilietinė veikla"]];
+  const base=[["s_events","Naujausi įvykiai"],["s_diary","Dienynas"],["s_tt","Tvarkaraštis"],["s_lessons","Pamokos"],["s_hw","Namų darbai"],["s_works","Atsiskaitomieji darbai"],["s_att","Lankomumas"],["s_notes","Pagyrimai / pastabos"],["s_periods","Trimestrai / pusmečiai"],["s_soc","Socialinė-pilietinė veikla"]];
   if(u.role==="parent")return[["Vaiko dienynas",base],["Tėvams",[["p_child","Vaiko duomenys"],["p_add","Pridėti vaiką"]]],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
   return[["Mano dienynas",base],["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]]];
 }
@@ -82,7 +82,11 @@ function render(){
   let who=`<b>${esc(u.first)} ${esc(u.last)}</b>${ROLE_NAME[u.role]}${u.role==="student"?` · ${esc(clsName(u.classId))}`:""}`;
   if(u.role==="teacher"){const hc=headClassesOf(u.id);if(hc.length)who+=` · kl. vadovas ${hc.map(c=>esc(c.name)).join(", ")}`;}
   if(u.role==="parent"){const kids=(u.childIds||[]).filter(id=>U(id));viewedStudent();who+=kids.length>1?`<select data-ch="child" aria-label="Vaikas">${kids.map(k=>`<option value="${k}" ${k===ui.child?"selected":""}>${esc(uNameFL(k))} (${esc(clsName(U(k).classId))})</option>`).join("")}</select>`:kids.length?`<div class="small" style="opacity:.8;margin-top:2px">Vaikas: ${esc(uNameFL(kids[0]))}</div>`:"";}
-  $("#root").innerHTML=`<div class="app"><aside class="side"><div class="brand"><b>Dienynas</b><span>${esc(core.settings.school)}</span></div><div class="who">${who}</div>
+  $("#root").innerHTML=`<div class="app${u.role==="student"||u.role==="parent"?" fam":""}">
+   <header class="topbar"><button class="tb-burger" data-act="menuOpen" aria-label="Atidaryti meniu">${ICON.burger}</button><div class="tb-brand">Dienynas</div><span class="tb-sp"></span>
+    <button class="tb-ic" data-act="view" data-v="acc" aria-label="Mano paskyra">${ICON.user}</button><button class="tb-ic" data-act="view" data-v="msg" aria-label="Pranešimai${un?`, neperskaitytų: ${un}`:""}">${ICON.mail}${un?`<span class="tb-badge">${un}</span>`:""}</button></header>
+   <div class="scrim" data-act="menuClose"></div>
+   <aside class="side" aria-label="Meniu"><div class="side-h"><span>Meniu</span><button class="side-x" data-act="menuClose" aria-label="Uždaryti meniu">${ICON.close}</button></div><div class="brand"><b>Dienynas</b><span>${esc(core.settings.school)}</span></div><div class="who">${who}</div>
    <nav class="nav">${menu.map(([sec,items])=>`<div class="sec">${sec}</div>`+items.map(([k,n])=>`<button data-act="view" data-v="${k}" aria-current="${ui.view===k}"><span>${n}</span>${k==="msg"&&un?`<span class="badge">${un}</span>`:""}</button>`).join("")).join("")}</nav>
    <div class="foot"><div><span class="dot ok"></span>Supabase · ${core.settings.yearStart}–${core.settings.yearStart+1} m. m.</div><button data-act="logout">Atsijungti</button></div></aside>
    <main id="main"></main></div>`;
