@@ -10,11 +10,11 @@ function weekSlots(gids,dateOk){const mon=mondayOf(ui.week||TODAY());const fri=a
 function weekGrid(gids,opt={}){const{mon,slots,maxNo}=weekSlots(gids,opt.dateOk);const t=TODAY();const u=me();
   let h=`<div class="scroll"><div class="week"><div></div>${[0,1,2,3,4].map(i=>{const d=addDays(mon,i);return `<div class="wh ${d===t?"today":""}">${WDL[i]} <span class="muted">${fmtD(d)}</span>${isHoliday(d)?' <span class="tag">laisva</span>':""}</div>`;}).join("")}`;
   for(let no=1;no<=maxNo;no++){h+=`<div class="no">${no}</div>`;for(let i=0;i<5;i++){const d=addDays(mon,i);const list=slots[no+"|"+d]||[];
-    h+=`<div class="slot ${list.length?"":"empty"}">${list.map(x=>{const g=grp(x.gid);const l=G(x.gid).lessons.find(y=>y.d===x.d);const kd=l&&["KD","TA","SD"].includes(l.t);
+    h+=`<div class="slot ${list.length?"":"empty"}">${list.map(x=>{const g=grp(x.gid);const l=G(x.gid).lessons.find(y=>y.d===x.d);const kd=l&&l.t?tStyle(l.t):"";
       if(opt.sid){const gs=G(x.gid).grades.filter(y=>y.s===opt.sid&&y.d===x.d);const a=G(x.gid).att.find(y=>y.s===opt.sid&&y.d===x.d);
-        return `<button class="lsn ${kd?"kd":""}" data-act="stuLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(subjName(g.subjectId))}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}${l&&l.t?` <span class="tag bad">${l.t}</span>`:""}<div class="chips" style="margin-top:2px">${gs.map(y=>chip(y)).join("")}${a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}">${a.m==="pv"?"p":a.j||"n"}</span>`:""}</div>${l&&l.hw?`<span class="small">ND: ${esc(l.hw)}</span>`:""}</button>`;}
+        return `<button class="lsn ${kd?"typed":""}"${kd} data-act="stuLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(subjName(g.subjectId))}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}${l&&l.t?` <span class="tag bad">${l.t}</span>`:""}<div class="chips" style="margin-top:2px">${gs.map(y=>chip(y)).join("")}${a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}">${a.m==="pv"?"p":a.j||"n"}</span>`:""}</div>${l&&l.hw?`<span class="small">ND: ${esc(l.hw)}</span>`:""}</button>`;}
       const sub=u&&u.role==="teacher"&&g.teacherId!==u.id;
-      return opt.ro?`<div class="lsn"><b>${esc(g.name)}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}</div>`:`<button class="lsn ${kd?"kd":""} ${sub?"sub":""}" data-act="openLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(g.name)}</b>${sub?`<span class="small">vaduojate: ${esc(uNameFL(g.teacherId))}</span>`:""}${l&&l.topic?`<span>${esc(l.topic)}</span>`:'<span class="muted">tema neįvesta</span>'}</button>`;}).join("")}</div>`;}}
+      return opt.ro?`<div class="lsn"><b>${esc(g.name)}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}</div>`:`<button class="lsn ${kd?"typed":""} ${sub?"sub":""}"${kd} data-act="openLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(g.name)}</b>${sub?`<span class="small">vaduojate: ${esc(uNameFL(g.teacherId))}</span>`:""}${l&&l.topic?`<span>${esc(l.topic)}</span>`:'<span class="muted">tema neįvesta</span>'}</button>`;}).join("")}</div>`;}}
   return h+`</div></div>`;}
 
 /* ================= MOKYTOJAS ================= */
@@ -47,7 +47,7 @@ VIEWS.t_grid=u=>{
   if(!g)return `<h1>Žurnalas</h1><div class="sheet empty">Grupių dar nėra. <button class="btn" data-act="view" data-v="t_groups">Sukurti grupę</button></div>`;
   const pOpts=periodOpts(sysOfGroup(g));ensureIn("pid",pOpts,curPeriod(sysOfGroup(g)));const pid=ui.pid;const d=G(g.id);const dates=journalDates(g,pid,true);
   const sids=[...g.students].sort(byName);const isk=(g.evalSys||"10")==="isk";
-  const head=dates.map(dt=>{const l=d.lessons.find(x=>x.d===dt);const t=l&&l.t;const ro=!canEditDate(g,dt);return `<th class="d ${t==="KD"?"kd":""} ${ro?"ro":""}" data-act="${ro?"roCell":"openLesson"}" data-g="${g.id}" data-d="${dt}" title="${esc(l&&l.topic||"Pamoka")}${t?" · "+esc(TYPE_NAME[t]):""}${l&&l.hw?" · ND: "+esc(l.hw):""}">${fmtD(dt)}<small>${t||(l&&l.hw?"ND":"&nbsp;")}</small></th>`;}).join("");
+  const head=dates.map(dt=>{const l=d.lessons.find(x=>x.d===dt);const t=l&&l.t;const ro=!canEditDate(g,dt);return `<th class="d ${t?"typed":""} ${ro?"ro":""}"${t?tStyle(t):""} data-act="${ro?"roCell":"openLesson"}" data-g="${g.id}" data-d="${dt}" title="${esc(l&&l.topic||"Pamoka")}${t?" · "+esc(TYPE_NAME[t]):""}${l&&l.hw?" · ND: "+esc(l.hw):""}">${fmtD(dt)}<small>${t||(l&&l.hw?"ND":"&nbsp;")}</small></th>`;}).join("");
   const rows=sids.map(sid=>{const cells=dates.map(dt=>{const gg=d.grades.filter(x=>x.s===sid&&x.d===dt);const a=d.att.find(x=>x.s===sid&&x.d===dt);const nt=d.notes.filter(x=>x.s===sid&&x.d===dt);const ro=!canEditDate(g,dt);
       const at=a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}" title="${a.m==="pv"?"Pavėlavo":a.j?esc(JUST_NAME[a.j]):"Nepateisinta"}">${a.m==="pv"?"p":a.j||"n"}</span>`:"";
       return `<td class="c ${ro?"ro":""}" data-act="${ro?"roCell":"cell"}" data-s="${sid}" data-d="${dt}"><div class="cellw">${gg.map(x=>chip(x)).join("")}${at}${nt.map(n=>`<span class="nt" title="${esc(n.text)}">${NOTE_ICON[n.kind]||""}</span>`).join("")}</div></td>`;}).join("");
@@ -72,14 +72,15 @@ function openCell(gid,sid,dt){const g=grp(gid),d=G(gid);const l=d.lessons.find(x
   dlgState={v:null,a:a?a.m:""};}
 function preJust(sid,dt){const p=core.prejust.find(x=>x.s===sid&&dt>=x.from&&dt<=x.to);return p?p.j:null;}
 function setAtt(d,sid,dt,m){const i=d.att.findIndex(x=>x.s===sid&&x.d===dt);if(!m){if(i>=0)d.att.splice(i,1);return;}
-  if(i>=0){const x=d.att[i];if(x.m!==m){x.m=m;x.j=m==="n"?preJust(sid,dt):null;}}else d.att.push({id:uid(),s:sid,d:dt,m,j:m==="n"?preJust(sid,dt):null});}
+  const now=new Date().toISOString();
+  if(i>=0){const x=d.att[i];if(x.m!==m){x.m=m;x.j=m==="n"?preJust(sid,dt):null;x.at=now;}}else d.att.push({id:uid(),s:sid,d:dt,m,j:m==="n"?preJust(sid,dt):null,at:now});}
 function ensureLesson(d,dt,gid){if(!d.lessons.find(l=>l.d===dt)){const oc=occDates(gid,dt,dt);d.lessons.push({d:dt,t:"",topic:"",hw:"",no:oc.get(dt)||null});}}
 async function saveCell(gid,sid,dt){const d=G(gid);const u=me();const ops=[];
   if(!d.lessons.find(l=>l.d===dt)){ensureLesson(d,dt,gid);ops.push(DB.lesson(gid,d.lessons.find(l=>l.d===dt)));}
   if(dlgState.v!=null){const x={id:uid(),s:sid,d:dt,t:$("#gType").value,v:parseV(dlgState.v),c:$("#gCom").value.trim(),by:u.id};d.grades.push(x);ops.push(DB.ins("grades",R.grade(gid,x)));}
   const had=!!d.att.find(x=>x.s===sid&&x.d===dt);setAtt(d,sid,dt,dlgState.a);const now=d.att.find(x=>x.s===sid&&x.d===dt);
   if(now)ops.push(DB.att(gid,now));else if(had)ops.push(DB.delAtt(gid,sid,dt));
-  const nk=$("#nKind").value,ntx=$("#nText").value.trim();if(nk&&ntx){const n={id:uid(),s:sid,d:dt,kind:nk,text:ntx,by:u.id};d.notes.push(n);ops.push(DB.ins("notes",R.note(gid,n)));}
+  const nk=$("#nKind").value,ntx=$("#nText").value.trim();if(nk&&ntx){const n={id:uid(),s:sid,d:dt,kind:nk,text:ntx,by:u.id,at:new Date().toISOString()};d.notes.push(n);ops.push(DB.ins("notes",R.note(gid,n)));}
   closeDlg();render();await Promise.all(ops);}
 /* ---- Pamokos langas: pažymių įvedimas kaip TAMO ---- */
 function lessonDefType(l){return l&&l.t&&TYPE_NAME[l.t]?l.t:"KL";}
@@ -114,7 +115,7 @@ VIEWS.t_journal=u=>{
      <div><span class="muted small">Grupė</span><b>${esc(g.name)}</b></div>
      <div><span class="muted small">Dalykas</span><b>${esc(subjName(g.subjectId))}</b></div>
      <div><span class="muted small">Mokytojas</span><b>${esc(uNameFL(g.teacherId))}</b>${g.teacherId!==u.id?'<span class="tag i">vaduojate</span>':""}</div>
-     <div><span class="muted small">Pamokos tipas</span><b class="${l.t==="KD"?"kdtxt":""}">${l.t?esc(TYPE_NAME[l.t]):"Įprasta pamoka"}</b></div>
+     <div><span class="muted small">Pamokos tipas</span><b class="${l.t?"tname":""}"${l.t?tStyle(l.t):""}>${l.t?esc(TYPE_NAME[l.t]):"Įprasta pamoka"}</b></div>
      <div><span class="muted small">Mokinių</span><b>${g.students.length}</b></div>
      ${ro?'<div><span class="tag">tik peržiūra</span></div>':`<div class="li-act"><button type="button" class="btn warn sm" data-act="delLesson" data-g="${g.id}" data-v="${dt}" ${cnt?`disabled title="Pirma ištrinkite šios pamokos įrašus (${cnt})"`:""}>Ištrinti pamoką</button></div>`}
    </div>`;
@@ -130,7 +131,7 @@ VIEWS.t_journal=u=>{
 function lessonInfoForm(g,l,dt,ro){const plan=core.plans.find(x=>x.id===g.planId);const dis=ro?"disabled":"";const cur=l.t||"";
   return `<form data-form="saveLesson" data-g="${g.id}" data-d="${dt}" class="lesson-form">
    <fieldset class="ltype"><legend>Pamokos tipas</legend>
-    ${[["","Įprasta pamoka"],...WORK_TYPES].map(([k,n])=>`<label class="ltype-opt ${k==="KD"?"kd":""}"><input type="radio" name="t" value="${k}" ${k===cur?"checked":""} ${dis}> ${n}</label>`).join("")}
+    ${[["","Įprasta pamoka"],...WORK_TYPES].map(([k,n])=>`<label class="ltype-opt"${k?tStyle(k):""}><input type="radio" name="t" value="${k}" ${k===cur?"checked":""} ${dis}> ${n}</label>`).join("")}
     <div class="small muted" style="flex-basis:100%">Pažymėjus atsiskaitomąjį darbą, mokiniai jį matys skiltyje „Atsiskaitomieji darbai“, o įvertinimų tipas bus parinktas automatiškai.</div>
    </fieldset>
    <label class="field">Tema<input name="topic" value="${esc(l.topic||"")}" list="planTopics" ${dis} placeholder="Pamokos tema"></label><datalist id="planTopics">${plan?plan.topics.map(t=>`<option value="${esc(t)}">`).join(""):""}</datalist>
@@ -154,7 +155,7 @@ function lessonRows(){const{gid,dt,ro}=ls;const g=grp(gid),d=G(gid);const l=d.le
     const type=ls.types[sid]||(cur&&cur.t)||lessonDefType(l);
     const attTxt=a?`<span class="gatt" title="${a.m==="pv"?"Pavėlavo":a.j?esc(JUST_NAME[a.j]):"Nedalyvavo"}">${a.m==="pv"?"p":a.j||"n"}</span>`:"";
     return `<tr><td class="num muted">${i+1}</td><td class="nm"><b>${esc(s.last)}</b>${progTag(g,sid)}<div>${esc(s.first)}</div></td>
-     <td class="gcol"><div class="gcell"><span class="gvs">${gs.map(x=>chip(x)).join(" ")}</span>${attTxt}</div></td>
+     <td class="gcol"${tStyle(type)}><div class="gcell"><span class="gvs">${gs.map(x=>chip(x)).join(" ")}</span>${attTxt}</div></td>
      <td><div class="gpick"><div class="gvals">${opts.map(([v,n])=>`<button type="button" class="gv" data-act="lv" data-s="${sid}" data-v="${v}" aria-pressed="${cur&&String(cur.v)===v}" title="${esc(VTITLE[v]||"Pažymys "+v)}" ${dis}>${n}</button>`).join("")}</div>
        <span class="trash-slot">${cur&&!ro?`<button type="button" class="trash" data-act="lgDel" data-v="${cur.id}" title="Ištrinti pažymį" aria-label="Ištrinti pažymį ${esc(VLABEL[cur.v]||cur.v)}">${TRASH_SVG}</button>`:""}</span></div></td>
      <td><select class="inp" data-ch="rowType" data-s="${sid}" ${dis} style="min-width:160px">${TYPES.map(([k,n])=>`<option value="${k}" ${k===type?"selected":""}>${n}</option>`).join("")}</select></td>
@@ -241,14 +242,16 @@ VIEWS.t_works=u=>{const own=teacherGroups(u.id);const gOpts=own.map(g=>[g.id,g.n
 
 /* ---- Socialinė-pilietinė veikla ---- */
 VIEWS.t_soc=u=>{const list=social.list.filter(a=>a.by===u.id).sort((a,b)=>lsort(b.d,a.d));
-  return `<h1>Socialinė-pilietinė veikla</h1><p class="lead">Pasirinkite klasę, pažymėkite dalyvavusius mokinius ir įrašykite valandas. Mokiniai ir tėvai matys, kas ir už kokią veiklą įrašė valandas bei kiek jų atlikta iš metinio plano.</p>
+  return `<h1>Socialinė-pilietinė veikla</h1><p class="lead">Pasirinkite klasę (ar kelias klases), pažymėkite dalyvavusius mokinius ir įrašykite valandas. Mokiniai ir tėvai matys, kas ir už kokią veiklą įrašė valandas bei kiek jų atlikta iš metinio plano.</p>
   <div class="bar"><button class="btn pri" data-act="socDlg">+ Naujas įvertinimas</button></div>
-  <div class="sheet scroll">${list.length?`<table><thead><tr><th>Data</th><th>Veikla</th><th>Partneris</th><th>Mokiniai</th><th class="num">Valandų</th><th></th></tr></thead><tbody>${list.map(a=>{const ids=Object.keys(a.hours).filter(U).sort(byName);const cl=[...new Set(ids.map(i=>clsName(U(i).classId)))].join(", ");
-    return `<tr><td style="white-space:nowrap">${a.d}</td><td><b>${esc(a.activity)}</b><div class="small muted">${esc(a.type)}${a.comment?" · "+esc(a.comment):""}</div></td><td>${esc(a.partner)}</td><td><span class="small"><b>${esc(cl)}</b>: ${ids.map(i=>`${esc(uName(i))} (${fmtH(a.hours[i])})`).join(", ")}</span></td><td class="num">${fmtH(Object.values(a.hours).reduce((x,y)=>x+y,0))}</td><td><button class="trash" data-act="delSoc" data-v="${a.id}" title="Ištrinti įrašą" aria-label="Ištrinti įrašą">${TRASH_SVG}</button></td></tr>`;}).join("")}</tbody></table>`:`<div class="empty">Įrašų nėra.</div>`}</div>`;};
+  <div class="sheet scroll">${list.length?`<table><thead><tr><th>Data</th><th>Veikla</th><th>Partneris</th><th>Mokiniai</th><th class="num">Valandų</th><th></th></tr></thead><tbody>${list.map(a=>{const ids=Object.keys(a.hours).filter(U).sort(byName);const byC=new Map();ids.forEach(i=>{const k=clsName(U(i).classId);(byC.get(k)||byC.set(k,[]).get(k)).push(i);});
+    return `<tr><td style="white-space:nowrap">${a.d}</td><td><b>${esc(a.activity)}</b><div class="small muted">${esc(a.type)}${a.comment?" · "+esc(a.comment):""}</div></td><td>${esc(a.partner)}</td><td><span class="small">${[...byC.entries()].sort((x,y)=>lsort(x[0],y[0])).map(([k,v])=>`<b>${esc(k)}</b>: ${v.map(i=>`${esc(uName(i))} (${fmtH(a.hours[i])})`).join(", ")}`).join("<br>")}</span></td><td class="num">${fmtH(Object.values(a.hours).reduce((x,y)=>x+y,0))}</td><td><button class="trash" data-act="delSoc" data-v="${a.id}" title="Ištrinti įrašą" aria-label="Ištrinti įrašą">${TRASH_SVG}</button></td></tr>`;}).join("")}</tbody></table>`:`<div class="empty">Įrašų nėra.</div>`}</div>`;};
 function socClassOpts(u){const head=headClassesOf(u.id).map(c=>c.id);const mine=new Set();teacherGroups(u.id).forEach(g=>g.students.forEach(s=>{const c=(U(s)||{}).classId;if(c)mine.add(c);}));
   const all=[...core.classes].sort((a,b)=>lsort(a.name,b.name));const first=head[0]||[...mine][0]||(all[0]||{}).id;return{all,first};}
-function socStudentList(cid){const ss=classStudents(cid);return ss.length?`<div class="row" style="justify-content:space-between;align-items:center"><b class="small">${esc(clsName(cid))} klasės mokiniai</b><span><button type="button" class="btn sm" data-act="socAll" data-v="1">Pažymėti visus</button> <button type="button" class="btn sm" data-act="socAll" data-v="0">Nuimti visus</button></span></div>
-  <div class="chk" style="margin-top:6px">${ss.map(s=>`<label><input type="checkbox" name="st" value="${s.id}">${esc(s.last)} ${esc(s.first)}<input type="number" name="h_${s.id}" min="0" step="0.5" style="width:64px;margin-left:auto" class="inp" placeholder="val."></label>`).join("")}</div>`:'<p class="muted small">Klasėje nėra mokinių.</p>';}
+function socStudentList(cid,hid=false){const ss=classStudents(cid);return `<div class="soc-cls" data-c="${cid}" ${hid?"hidden":""}>`+(ss.length?`<div class="row" style="justify-content:space-between;align-items:center"><b class="small">${esc(clsName(cid))} klasės mokiniai</b><span><button type="button" class="btn sm" data-act="socAll" data-v="1">Pažymėti visus</button> <button type="button" class="btn sm" data-act="socAll" data-v="0">Nuimti visus</button></span></div>
+  <div class="chk" style="margin-top:6px">${ss.map(s=>`<label><input type="checkbox" name="st" value="${s.id}">${esc(s.last)} ${esc(s.first)}<input type="number" name="h_${s.id}" min="0" step="0.5" style="width:64px;margin-left:auto" class="inp" placeholder="val."></label>`).join("")}</div>`:'<p class="muted small">Klasėje nėra mokinių.</p>')+`</div>`;}
+function socSummary(){const box=$("#socSum");if(!box)return;const by=new Map();$$('#socStudents input[name=st]:checked').forEach(c=>{const k=clsName((U(c.value)||{}).classId);by.set(k,(by.get(k)||0)+1);});
+  const n=[...by.values()].reduce((a,b)=>a+b,0);box.innerHTML=n?`Pažymėta mokinių: <b>${n}</b> (${[...by.entries()].sort((a,b)=>lsort(a[0],b[0])).map(([k,v])=>`${esc(k)}: ${v}`).join(", ")})`:"Pažymėtų mokinių nėra. Galite žymėti mokinius iš kelių klasių — perjunkite klasę, pažymėtieji neišsitrins.";}
 function socDlg(){const u=me();const{all,first}=socClassOpts(u);if(!all.length){toast("Mokykloje dar nėra klasių");return;}
   openDlg(dlgHead("Socialinės-pilietinės veiklos įvertinimas")+`<form data-form="saveSoc"><div class="dlg-b">
    <div class="row"><label class="field" style="flex:1">Veiklos tipas<select name="type">${SOC_TYPES.map(t=>`<option>${t}</option>`).join("")}</select></label><label class="field" style="flex:1">Soc. partneris<input name="partner" value="${esc(core.settings.school)}"></label></div>
@@ -256,7 +259,7 @@ function socDlg(){const u=me();const{all,first}=socClassOpts(u);if(!all.length){
    <div class="row"><label class="field">Data<input type="date" name="d" value="${TODAY()}" required></label><label class="field">Valandos<input type="number" name="hours" min="0.5" step="0.5" value="2" style="min-width:80px"></label><label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" name="equal" checked> Visų vienodas indėlis</label></div>
    <div class="small muted">Jei indėlis nevienodas, nuimkite žymą ir įrašykite valandas prie kiekvieno mokinio.</div>
    <label class="field" style="max-width:200px">Klasė<select data-ch="socCls">${all.map(c=>`<option value="${c.id}" ${c.id===first?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
-   <div id="socStudents">${socStudentList(first)}</div></div>
+   <div id="socStudents">${all.map(c=>socStudentList(c.id,c.id!==first)).join("")}</div><div id="socSum" class="soc-sum"></div></div>
    <div class="dlg-f"><button type="button" class="btn" data-act="close">Atšaukti</button><button class="btn pri">Išsaugoti</button></div></form>`,true);}
 VIEWS.t_subs=u=>{const to=core.subs.filter(s=>s.to===u.id),from=core.subs.filter(s=>s.from===u.id);
   return `<h1>Pavadavimai</h1><p class="lead">Kai jus paskiria vaduoti, vaduojamo mokytojo grupės atsiranda jūsų tvarkaraštyje ir pamokų sąraše. Pildyti galite tik nurodyto laikotarpio pamokas.</p>
