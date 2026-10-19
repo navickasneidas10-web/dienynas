@@ -32,7 +32,7 @@ async function loadSettingsPublic() {
   if (r.error) authUi.dbError = r.error.message;
 }
 function mapSettings(s) {
-  return { school: s.school, yearStart: s.year_start, system: s.system, rounding: Number(s.rounding), periods: s.periods, holidays: s.holidays || [], demo: false };
+  return { school: s.school, yearStart: s.year_start, system: s.system, rounding: Number(s.rounding), periods: s.periods, holidays: s.holidays || [], bells: Array.isArray(s.bells) ? s.bells : DEFAULT_BELLS.slice(), demo: false };
 }
 async function loadAll() {
   const res = await Promise.all(TABLES.map(fetchAll));
@@ -60,10 +60,10 @@ async function loadAll() {
 
   const g = {};
   const GG = id => (g[id] ??= { lessons: [], grades: [], att: [], pg: {}, notes: [] });
-  D.lessons.forEach(x => GG(x.group_id).lessons.push({ id: x.id, d: x.date, no: x.no, t: x.type, topic: x.topic, cw: x.classwork || "", hw: x.hw, hwDue: x.hw_due || "" }));
+  D.lessons.forEach(x => GG(x.group_id).lessons.push({ id: x.id, d: x.date, no: x.no, t: x.type, topic: x.topic, cw: x.classwork || "", hw: x.hw, hwDue: x.hw_due || "", hwAt: x.hw_at || "" }));
   D.grades.forEach(x => GG(x.group_id).grades.push({ id: x.id, s: x.student_id, d: x.date, t: x.type, v: parseV(x.value), c: x.comment, by: x.created_by, at: x.created_at }));
-  D.attendance.forEach(x => GG(x.group_id).att.push({ id: x.id, s: x.student_id, d: x.date, m: x.mark, j: x.just }));
-  D.notes.forEach(x => GG(x.group_id).notes.push({ id: x.id, s: x.student_id, d: x.date, kind: x.kind, text: x.text, by: x.created_by }));
+  D.attendance.forEach(x => GG(x.group_id).att.push({ id: x.id, s: x.student_id, d: x.date, m: x.mark, j: x.just, at: x.created_at || "" }));
+  D.notes.forEach(x => GG(x.group_id).notes.push({ id: x.id, s: x.student_id, d: x.date, kind: x.kind, text: x.text, by: x.created_by, at: x.created_at || "" }));
   D.period_grades.forEach(x => { const pg = GG(x.group_id).pg; (pg[x.student_id] ??= {})[x.period] = parseV(x.value); });
 
   const hours = {};
@@ -100,16 +100,16 @@ const R = {
     eval_sys: g.evalSys || "10", extra: g.extra || {}, plan_id: g.planId || null }),
   members: g => g.students.map(s => ({ group_id: g.id, student_id: s, program: (g.programs || {})[s] || null })),
   tt: t => ({ id: t.id, group_id: t.g, wd: t.wd, no: t.no, date_from: t.from, weeks: t.weeks, parity: t.parity || "all" }),
-  lesson: (gid, l) => ({ group_id: gid, date: l.d, no: l.no || null, type: l.t || "", topic: l.topic || "", classwork: l.cw || "", hw: l.hw || "", hw_due: l.hwDue || null }),
+  lesson: (gid, l) => ({ group_id: gid, date: l.d, no: l.no || null, type: l.t || "", topic: l.topic || "", classwork: l.cw || "", hw: l.hw || "", hw_due: l.hwDue || null, ...(l.hwAt ? { hw_at: l.hwAt } : {}) }),
   grade: (gid, x) => ({ id: x.id, group_id: gid, student_id: x.s, date: x.d, type: x.t, value: String(x.v), comment: x.c || "", created_by: x.by || null }),
-  att: (gid, a) => ({ group_id: gid, student_id: a.s, date: a.d, mark: a.m, just: a.j || null }),
-  note: (gid, n) => ({ id: n.id, group_id: gid, student_id: n.s, date: n.d, kind: n.kind, text: n.text, created_by: n.by || null }),
+  att: (gid, a) => ({ group_id: gid, student_id: a.s, date: a.d, mark: a.m, just: a.j || null, ...(a.at ? { created_at: a.at } : {}) }),
+  note: (gid, n) => ({ id: n.id, group_id: gid, student_id: n.s, date: n.d, kind: n.kind, text: n.text, created_by: n.by || null, ...(n.at ? { created_at: n.at } : {}) }),
   work: w => ({ id: w.id, group_id: w.g, date: w.d, type: w.t, topic: w.topic || "" }),
   prejust: p => ({ id: p.id, student_id: p.s, date_from: p.from, date_to: p.to, code: p.j }),
   sub: s => ({ id: s.id, from_teacher: s.from, to_teacher: s.to, date_from: s.dFrom, date_to: s.dTo }),
   hsub: s => ({ id: s.id, class_id: s.classId, to_teacher: s.to, date_from: s.dFrom, date_to: s.dTo }),
   plan: p => ({ id: p.id, owner_id: p.ownerId, name: p.name, descr: p.desc || "", subject_id: p.subjectId || null, topics: p.topics }),
-  settings: s => ({ school: s.school, year_start: s.yearStart, system: s.system, rounding: s.rounding, periods: s.periods, holidays: s.holidays }),
+  settings: s => ({ school: s.school, year_start: s.yearStart, system: s.system, rounding: s.rounding, periods: s.periods, holidays: s.holidays, bells: s.bells || DEFAULT_BELLS }),
 };
 const DB = {
   ins: (t, rows) => W(sb.from(t).insert(rows)),
