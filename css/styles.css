@@ -388,18 +388,19 @@ button.drow:hover{background:var(--line-2)}
 .te{background:var(--surface);margin:0 -26px}
 .te-h{display:flex;justify-content:space-between;align-items:center;background:#E1ECF4;color:#1F5878;padding:12px 20px;font-size:21px;font-weight:600}
 .te-chip{background:#fff;color:#1F5878;border-radius:999px;padding:3px 12px;font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.02em}
-.te-row{display:flex;align-items:stretch;width:100%;background:var(--surface);border:0;text-align:left;font:inherit;color:inherit;cursor:pointer;padding:16px 20px 16px 0}
-.te-row+.te-row{padding-top:4px}
-.te-v{flex:0 0 110px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#222}
-.te-b{flex:0 0 4px;background:var(--tc);margin:4px 0}.te-b.nob{background:transparent}
-.te-t{display:flex;flex-direction:column;gap:6px;padding-left:22px;min-width:0}
-.te-t b{font-size:20px;font-weight:600;color:#2B2B2B}.te-t span{font-size:16px;color:#3A3A3A}.te-t .te-les{font-size:13px;color:#7A8590}
+.te-row{display:grid;grid-template-columns:110px 4px 1fr;grid-template-areas:"v b t" ". . f";align-items:center;width:100%;background:var(--surface);border:0;text-align:left;font:inherit;color:inherit;cursor:pointer;padding:16px 20px 16px 0}
+.te-row+.te-row{padding-top:6px}
+.te-v{grid-area:v;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#222;line-height:1}
+.te-b{grid-area:b;align-self:stretch;background:var(--tc)}.te-b.nob{background:transparent}
+.te-t{grid-area:t;display:flex;flex-direction:column;gap:4px;padding-left:22px;min-width:0}
+.te-t b{font-size:20px;font-weight:600;color:#2B2B2B}.te-t span{font-size:16px;color:#3A3A3A}
+.te-f{grid-area:f;padding:6px 0 0 22px;font-size:13.5px;color:#6B7680}.te-f b{color:#2B2B2B;font-weight:700}
 .te-ic svg{width:34px;height:34px}.te-ic.hw{color:#1F5878}
-@media (max-width:860px){.te{margin:0 -12px}.te-v{flex-basis:96px}}
+@media (max-width:860px){.te{margin:0 -12px}.te-row{grid-template-columns:84px 4px 1fr}}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .te-h{background:#22324A;color:#CFE0F0}:root:not([data-theme="light"]) .te-v,:root:not([data-theme="light"]) .te-t b,:root:not([data-theme="light"]) .te-t span{color:var(--ink)}}
 :root[data-theme="dark"] .te-h{background:#22324A;color:#CFE0F0}:root[data-theme="dark"] .te-v,:root[data-theme="dark"] .te-t b,:root[data-theme="dark"] .te-t span{color:var(--ink)}
 /* Didesni pažymiai dienyne ir naujausiuose įvykiuose */
 .diary .drow{grid-template-columns:84px 1fr auto}
-.diary .dval .g{font-size:36px;line-height:1}
-.te-v{font-size:40px}
-@media (max-width:600px){.diary .drow{grid-template-columns:64px 1fr auto;gap:8px}.diary .dval .g{font-size:32px}.te-v{font-size:36px}}
+.diary .dval .g{font-size:32px;line-height:1}
+.te-v{font-size:32px}
+@media (max-width:600px){.diary .drow{grid-template-columns:60px 1fr auto;gap:8px}}
