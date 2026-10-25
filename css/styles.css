@@ -404,3 +404,8 @@ button.drow:hover{background:var(--line-2)}
 .diary .dval .g{font-size:32px;line-height:1}
 .te-v{font-size:32px}
 @media (max-width:600px){.diary .drow{grid-template-columns:60px 1fr auto;gap:8px}}
+.past-l{display:flex;flex-direction:column;gap:8px}
+.past-i{display:flex;flex-direction:column;gap:3px;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font:inherit;color:inherit;cursor:pointer;font-size:14px}
+.past-i:hover{background:var(--line-2)}.past-h{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}.past-h span{color:var(--ink-2);font-size:13px}
+.grid thead th .slotn{display:block;font-style:normal;font-size:10px;color:var(--ink-2);line-height:1}
+.ny-del{display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--pen);white-space:nowrap}
