@@ -409,3 +409,4 @@ button.drow:hover{background:var(--line-2)}
 .past-i:hover{background:var(--line-2)}.past-h{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}.past-h span{color:var(--ink-2);font-size:13px}
 .grid thead th .slotn{display:block;font-style:normal;font-size:10px;color:var(--ink-2);line-height:1}
 .ny-del{display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--pen);white-space:nowrap}
+.past-h span.kdtxt{color:var(--pen);font-weight:700}
