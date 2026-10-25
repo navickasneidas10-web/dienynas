@@ -82,7 +82,7 @@ function subjectDlg(id){const s=id?subj(id):{name:"",kind:"pagrindinis",parentId
 VIEWS.a_periods=()=>{const s=core.settings;const ids=["P1","P2","T1","T2","T3"];
   return `<h1>Laikotarpiai</h1><p class="lead">Mokslo metų laikotarpių datos. Klasė naudoja pusmečius arba trimestrus pagal klasės nustatymą. Datos neturi persidengti — kitaip mokytojams kils sunkumų pildant pamokas.</p>
   <div class="sheet pad"><form data-form="saveSettings"><div class="bar"><label class="field">Mokyklos pavadinimas<input name="school" value="${esc(s.school)}"></label>
-   <label class="field">Mokslo metai<select name="yearStart">${[2024,2025,2026,2027].map(y=>`<option value="${y}" ${y===s.yearStart?"selected":""}>${y}–${y+1}</option>`).join("")}</select></label>
+   <label class="field">Mokslo metai<select name="yearStart">${[...new Set([2024,2025,2026,2027,s.yearStart-1,s.yearStart,s.yearStart+1])].sort().map(y=>`<option value="${y}" ${y===s.yearStart?"selected":""}>${y}–${y+1}</option>`).join("")}</select></label>
    <label class="field">Numatytoji sistema<select name="system"><option value="pusm" ${s.system==="pusm"?"selected":""}>Pusmečiai</option><option value="trim" ${s.system==="trim"?"selected":""}>Trimestrai</option></select></label>
    <label class="field">Laikotarpio pažymio apvalinimas<select name="rounding"><option value="0.5" ${s.rounding===0.5?"selected":""}>Matematiškai: nuo ,50</option><option value="0.45" ${s.rounding===0.45?"selected":""}>Mokinio naudai: nuo ,45</option><option value="0.4" ${s.rounding===0.4?"selected":""}>Mokinio naudai: nuo ,40</option></select></label></div>
    <table><thead><tr><th>Laikotarpis</th><th>Nuo</th><th>Iki</th></tr></thead><tbody>${ids.map(id=>`<tr><td>${PNAME[id]}</td><td><input class="inp" type="date" name="from_${id}" value="${s.periods[id].from}"></td><td><input class="inp" type="date" name="to_${id}" value="${s.periods[id].to}"></td></tr>`).join("")}</tbody></table>
@@ -163,3 +163,41 @@ function studentReportView(classList,title,backLead){
   return periodsReport(ui.repStu,`<h1>${title}</h1><p class="lead">${backLead}</p>${bar}<div class="rep-who"><b>${esc(s.last)} ${esc(s.first)}</b> · ${esc(clsName(s.classId))} klasė · soc.-pilietinė veikla: ${socProgress(s.id)}</div>`);}
 VIEWS.a_studrep=()=>studentReportView([...core.classes],"Mokinio mokymosi ataskaita","Tokia pati ataskaita, kokią mokinys ir tėvai mato skiltyje „Trimestrai / pusmečiai“: pasirinkto laikotarpio pažymiai, vidurkiai ir išvesti įvertinimai.");
 VIEWS.h_studrep=u=>studentReportView(headClassesOf(u.id),"Mokinio mokymosi ataskaita","Jūsų auklėtinių asmeninės ataskaitos — tai, ką mokinys ir tėvai mato skiltyje „Trimestrai / pusmečiai“.");
+
+/* ================= Perėjimas į naujus mokslo metus ================= */
+const nextClassName=n=>String(n).replace(/^(\d+)/,m=>String(+m+1));
+VIEWS.a_newyear=()=>{const s=core.settings;const y=s.yearStart+1;const P=defaultPeriodDates(y);const ids=["P1","P2","T1","T2","T3"];
+  const cls=[...core.classes].sort((a,b)=>(a.level-b.level)||lsort(a.name,b.name));
+  const rows=cls.map(c=>{const n=classStudents(c.id).length;const last=c.level>=12;
+    return `<tr><td><b>${esc(c.name)}</b><div class="small muted">${c.level} kl. · mokinių: ${n}</div></td><td><input class="inp" name="cn_${c.id}" value="${esc(last?c.name:nextClassName(c.name))}" style="max-width:140px"></td>
+    <td class="small">${last?"lieka 12 kl.":`${c.level} → ${c.level+1} kl.`}</td><td><label class="ny-del"><input type="checkbox" name="cdel_${c.id}" ${last?"checked":""}> Ištrinti klasę ir jos mokinius</label></td></tr>`;}).join("");
+  return `<h1>Nauji mokslo metai</h1><p class="lead">Perėjimas iš ${s.yearStart}–${s.yearStart+1} į ${y}–${y+1} m. m. Pirmiausia atsisiųskite archyvą — po perėjimo šių metų pažymių, lankomumo ir pamokų dienyne nebeliks.</p>
+  <div class="note bad" style="margin-bottom:14px"><b>Kas įvyks:</b> ištrinamos visos grupės su pamokomis, pažymiais, lankomumu, pastabomis, trimestrų / pusmečių ir metiniais įvertinimais, tvarkaraščiai, atsiskaitomieji darbai, pavadavimai, išankstiniai pateisinimai ir socialinės veiklos įrašai. Klasės pakyla kursu aukštyn ir gauna žemiau nurodytus pavadinimus. Pažymėtos klasės ištrinamos kartu su mokiniais ir jų tėvais (jei tėvai neturi kitų vaikų mokykloje). Darbuotojai, dalykai, teminiai planai ir pranešimai lieka. Atšaukti negalima.</div>
+  <h2>1. Archyvas</h2><div class="sheet pad"><div class="row"><button class="btn pri" data-act="nyArchive">Atsisiųsti archyvą (Excel)</button>${ui.nyArch?'<span class="tag ok">Archyvas atsisiųstas</span>':'<span class="small muted">Byloje bus mokiniai, pažymiai, lankomumas, laikotarpių ir metiniai įvertinimai, pamokų temos, pastabos ir socialinė veikla.</span>'}</div></div>
+  <form data-form="newYear">
+  <h2>2. Klasės</h2><div class="sheet scroll">${rows?`<table><thead><tr><th>Dabar</th><th>Naujas pavadinimas</th><th>Kursas</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">Klasių nėra.</div>'}</div>
+  <h2>3. Nauji laikotarpiai (${y}–${y+1} m. m.)</h2><div class="sheet pad"><table><thead><tr><th>Laikotarpis</th><th>Nuo</th><th>Iki</th></tr></thead><tbody>${ids.map(id=>`<tr><td>${PNAME[id]}</td><td><input class="inp" type="date" name="nf_${id}" value="${P[id].from}" required></td><td><input class="inp" type="date" name="nt_${id}" value="${P[id].to}" required></td></tr>`).join("")}</tbody></table>
+   <p class="small muted" style="margin:8px 0 0">Atostogas ir šventines dienas po perėjimo galėsite įvesti skiltyje „Laikotarpiai“.</p></div>
+  <h2>4. Patvirtinimas</h2><div class="sheet pad"><label class="field" style="max-width:360px">Įrašykite žodį <b>PEREITI</b><input name="confirm" autocomplete="off" required></label>
+   <div style="margin-top:12px"><button class="btn warn" ${ui.nyArch?"":'disabled title="Pirmiausia atsisiųskite archyvą"'}>Pereiti į ${y}–${y+1} mokslo metus</button></div></div></form>`;};
+
+/* Excel archyvas (SheetJS įkeliama tik prireikus) */
+function loadXlsx(){if(window.XLSX)return Promise.resolve();return new Promise((ok,bad)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";sc.onload=ok;sc.onerror=()=>bad(new Error("Nepavyko įkelti Excel bibliotekos"));document.head.appendChild(sc);});}
+function buildArchive(){const V=v=>v==null?"":(VLABEL[v]??String(v));const nm=id=>{const x=U(id);return x?`${x.last} ${x.first}`:"(pašalintas)";};const cl=id=>clsName((U(id)||{}).classId)||"";
+  const sheets={};const st=students().sort((a,b)=>lsort(cl(a.id)+a.last+a.first,cl(b.id)+b.last+b.first));
+  sheets["Mokiniai"]=[["Klasė","Pavardė","Vardas","Prisijungimas","Tėvai"],...st.map(s=>[cl(s.id),s.last,s.first,s.login||"",Object.values(users).filter(p=>p.role==="parent"&&(p.childIds||[]).includes(s.id)).map(p=>`${p.last} ${p.first}`).join(", ")])];
+  const gr=[["Data","Klasė","Mokinys","Dalykas","Grupė","Mokytojas","Tipas","Įvertinimas","Komentaras"]],at=[["Data","Klasė","Mokinys","Dalykas","Grupė","Žyma","Pateisinimas"]],
+    ls=[["Data","Pamoka","Grupė","Dalykas","Mokytojas","Tipas","Tema","Klasės darbas","Namų darbai","Atlikti iki"]],nt=[["Data","Klasė","Mokinys","Dalykas","Rūšis","Tekstas","Įrašė"]];
+  const pids=["P1","P2","T1","T2","T3","Y"];const pg=[["Klasė","Mokinys","Dalykas","Grupė","Mokytojas",...pids.map(p=>PNAME[p])]];
+  const gs=[["Grupė","Dalykas","Mokytojas","Mokinių","Vertinimas"]];
+  [...core.groups].sort((a,b)=>lsort(a.name,b.name)).forEach(g=>{const D=G(g.id);const sub=subjName(g.subjectId),t=nm(g.teacherId);gs.push([g.name,sub,t,g.students.length,EVAL_SYS[g.evalSys||"10"]||""]);
+    D.grades.forEach(x=>gr.push([kDate(x.d),cl(x.s),nm(x.s),sub,g.name,t,TYPE_NAME[x.t]||x.t||"",V(x.v),x.c||""]));
+    D.att.forEach(x=>at.push([kDate(x.d),cl(x.s),nm(x.s),sub,g.name,x.m==="pv"?"p (pavėlavo)":"n (nedalyvavo)",x.j?JUST_NAME[x.j]||x.j:(x.m==="n"?"nepateisinta":"")]));
+    D.lessons.forEach(l=>ls.push([kDate(l.d),l.no||"",g.name,sub,t,l.t?TYPE_NAME[l.t]||l.t:"",l.topic||"",l.cw||"",l.hw||"",l.hwDue||""]));
+    D.notes.forEach(x=>nt.push([kDate(x.d),cl(x.s),nm(x.s),sub,NOTE_NAME[x.kind]||x.kind,x.text||"",nm(x.by)]));
+    Object.entries(D.pg||{}).forEach(([sid,m])=>pg.push([cl(sid),nm(sid),sub,g.name,t,...pids.map(p=>V(m[p]))]));});
+  const srt=a=>[a[0],...a.slice(1).sort((x,y)=>lsort(String(x[0])+x[1]+x[2],String(y[0])+y[1]+y[2]))];
+  sheets["Pažymiai"]=srt(gr);sheets["Lankomumas"]=srt(at);sheets["Laikotarpių įvertinimai"]=srt(pg);sheets["Pamokos"]=srt(ls);sheets["Pastabos"]=srt(nt);sheets["Grupės"]=gs;
+  const so=[["Data","Veikla","Tipas","Partneris","Klasė","Mokinys","Valandos","Įrašė"]];social.list.forEach(a=>Object.entries(a.hours||{}).forEach(([sid,h])=>so.push([a.d,a.activity,a.type,a.partner,cl(sid),nm(sid),h,nm(a.by)])));sheets["Socialinė veikla"]=srt(so);
+  const wb=XLSX.utils.book_new();Object.entries(sheets).forEach(([n,rows])=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws["!cols"]=rows[0].map((_,i)=>({wch:Math.min(50,Math.max(8,...rows.slice(0,300).map(r=>String(r[i]??"").length+2)))}));XLSX.utils.book_append_sheet(wb,ws,n.slice(0,31));});
+  return wb;}

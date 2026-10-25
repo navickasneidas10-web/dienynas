@@ -53,7 +53,7 @@ async function afterAuth(){
   if(aal.data&&aal.data.nextLevel==="aal2"&&aal.data.currentLevel!=="aal2"){authUi.step="otp";ready=true;renderAuth();return;}
   try{await loadAll();}catch(e){authUi.err="Nepavyko įkelti duomenų: "+e.message;authUi.step="cred";ready=true;renderAuth();return;}
   const f=await sb.auth.mfa.listFactors();const t=(f.data&&f.data.totp||[]).find(x=>x.status==="verified");mfa={enabled:!!t,factorId:t?t.id:null};
-  if(!me()){authUi.step="unlinked";ready=true;renderAuth();return;}
+  if(!me()){unsubscribeRealtime();await sb.auth.signOut();authUser=null;session=null;authUi.step="cred";authUi.tab="login";authUi.err="Tokios paskyros neegzistuoja.";ready=true;renderAuth();return;}
   authUi.step=me().mustChange?"change":"cred";authUi.err="";authUi.info="";authUi.keyInfo=null;
   subscribeRealtime();ready=true;render();
 }
@@ -65,7 +65,7 @@ function menuFor(u){
   const acc=["Paskyra",[["msg","Pranešimai"],["acc","Mano paskyra"]]];
   if(isStaff(u)){const m=[];
     if(hasRole(u,"admin"))m.push(["Mokykla",[["a_home","Pradžia"],["a_classes","Klasės"],["a_students","Mokiniai"],["a_teachers","Darbuotojai"],["a_subjects","Dalykai"]]],
-      ["Nustatymai",[["a_periods","Laikotarpiai"],["a_status","Vertinimo būsenos"],["a_evalsys","Vertinimo sistemos"],["a_subs","Pavadavimai"],["a_tt","Mokytojų tvarkaraščiai"]]],
+      ["Nustatymai",[["a_periods","Laikotarpiai"],["a_status","Vertinimo būsenos"],["a_evalsys","Vertinimo sistemos"],["a_subs","Pavadavimai"],["a_tt","Mokytojų tvarkaraščiai"],["a_newyear","Nauji mokslo metai"]]],
       ["Ataskaitinės veiklos",[["a_reports","Ataskaitos"],["a_studrep","Mokinio ataskaita"],["a_users","Naudotojai"],["a_data","Duomenys"]]]);
     else if(hasRole(u,"deputy"))m.push(["Direktoriaus pavaduotojui",[["a_reports","Ataskaitos"],["a_studrep","Mokinio ataskaita"],["a_tt","Mokytojų tvarkaraščiai"],["a_subs","Pavadavimai"]]]);
     if(hasRole(u,"teacher")){m.push(["Mano dienynas",[["t_tt","Tvarkaraštis"],["t_journal","Pamokos"],["t_grid","Žurnalas"],["t_groups","Grupės"],["t_plans","Pamokų teminiai planai"],["t_works","Atsiskaitomieji darbai"],["t_soc","Socialinė-pilietinė veikla"],["t_subs","Pavadavimai"]]],["Mokytojo ataskaitos",[["t_periods","Trimestrai / pusmečiai"]]]);

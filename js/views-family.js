@@ -24,10 +24,10 @@ function subjFilterOpts(sid){return [["*","Visi dalykai"],...[...new Set(student
 /* ---- Naujausi įvykiai: pažymiai, lankomumas, namų darbai, pagyrimai/pastabos pagal įrašymo datą ---- */
 VIEWS.s_events=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();const items=[];const day=at=>at?String(at).slice(0,10)===String(at).slice(0,10)&&(()=>{const d=new Date(at);return isNaN(d)?null:`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;})():null;
   studentGroups(sid).forEach(g=>{const D=G(g.id);
-    D.grades.filter(x=>x.s===sid).forEach(x=>items.push({k:"g",ed:day(x.at)||x.d,at:x.at||x.d,g,x}));
-    D.att.filter(x=>x.s===sid).forEach(x=>items.push({k:"a",ed:day(x.at)||x.d,at:x.at||x.d,g,x}));
-    D.notes.filter(x=>x.s===sid).forEach(x=>items.push({k:"n",ed:day(x.at)||x.d,at:x.at||x.d,g,x}));
-    D.lessons.filter(l=>l.hw).forEach(l=>items.push({k:"h",ed:day(l.hwAt)||l.d,at:l.hwAt||l.d,g,x:l}));});
+    D.grades.filter(x=>x.s===sid).forEach(x=>items.push({k:"g",ed:day(x.at)||kDate(x.d),at:x.at||x.d,g,x}));
+    D.att.filter(x=>x.s===sid).forEach(x=>items.push({k:"a",ed:day(x.at)||kDate(x.d),at:x.at||x.d,g,x}));
+    D.notes.filter(x=>x.s===sid).forEach(x=>items.push({k:"n",ed:day(x.at)||kDate(x.d),at:x.at||x.d,g,x}));
+    D.lessons.filter(l=>l.hw).forEach(l=>items.push({k:"h",ed:day(l.hwAt)||kDate(l.d),at:l.hwAt||l.d,g,x:l}));});
   const from=addDays(TODAY(),-4);const list=items.filter(i=>i.ed>=from&&i.ed<=TODAY()).sort((a,b)=>lsort(b.at,a.at));
   const days=[...new Set(list.map(i=>i.ed))].sort().reverse();
   const at=i=>`data-act="stuLesson" data-g="${i.g.id}" data-d="${i.x.d}"`;const les=(x,extra="")=>`<span class="te-les">Įrašyta į <b>${dayGen(x.d)}</b> pamoką.${extra}</span>`;
@@ -52,30 +52,30 @@ VIEWS.s_diary=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();c
   if(!items.length)return head+`<div class="sheet empty">${mon}: įvertinimų ir lankomumo žymų nėra.</div>`;
   if(ui.dTab==="subj"){const bySub=new Map();items.filter(i=>i.k==="g").forEach(i=>{const k=subjName(i.g.subjectId);(bySub.get(k)||bySub.set(k,[]).get(k)).push(i);});
     const rows=[...bySub.entries()].sort((a,b)=>lsort(a[0],b[0])).map(([name,list])=>{list.sort((a,b)=>lsort(a.d,b.d));const av=avgOf(list.map(i=>i.x));
-      return `<tr><td><b>${esc(name)}</b><div class="dgrades only-m" style="margin-top:4px">${list.map(i=>`<span class="dg">${chip(i.x,false)}<small>${i.d.slice(5)}</small></span>`).join("")}</div></td><td class="only-d"><div class="dgrades">${list.map(i=>`<span class="dg" title="${esc(TYPE_NAME[i.x.t]||"")}${i.x.c?" · "+esc(i.x.c):""}">${chip(i.x,false)}<small>${i.d.slice(5)}</small></span>`).join("")}</div></td><td class="num"><b>${fmtAvg(av)}</b></td></tr>`;}).join("");
+      return `<tr><td><b>${esc(name)}</b><div class="dgrades only-m" style="margin-top:4px">${list.map(i=>`<span class="dg">${chip(i.x,false)}<small>${i.d.slice(5,10)}</small></span>`).join("")}</div></td><td class="only-d"><div class="dgrades">${list.map(i=>`<span class="dg" title="${esc(TYPE_NAME[i.x.t]||"")}${i.x.c?" · "+esc(i.x.c):""}">${chip(i.x,false)}<small>${i.d.slice(5,10)}</small></span>`).join("")}</div></td><td class="num"><b>${fmtAvg(av)}</b></td></tr>`;}).join("");
     return head+`<div class="sheet scroll">${rows?`<table><thead><tr><th>Dalykas</th><th class="only-d">Įvertinimai</th><th class="num">Vidurkis</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">Šį mėnesį įvertinimų nėra.</div>'}</div>`;}
-  const days=[...new Set(items.map(i=>i.d))].sort().reverse();
-  return head+dayBlocks(days,d=>items.filter(i=>i.d===d).sort((a,b)=>lsort(subjName(a.g.subjectId),subjName(b.g.subjectId))).map(i=>{const x=i.x;const A=`data-act="stuLesson" data-g="${i.g.id}" data-d="${i.d}"`;
+  const days=[...new Set(items.map(i=>kDate(i.d)))].sort().reverse();
+  return head+dayBlocks(days,d=>items.filter(i=>kDate(i.d)===d).sort((a,b)=>lsort(subjName(a.g.subjectId),subjName(b.g.subjectId))).map(i=>{const x=i.x;const A=`data-act="stuLesson" data-g="${i.g.id}" data-d="${i.d}"`;
     if(i.k==="g")return drow(A,chip({v:x.v},false),`<div class="dtxt-in${stripe(x.t)}"><b>${esc(subjName(i.g.subjectId))}</b><div>${esc(TYPE_NAME[x.t]||x.t||"")}${x.c?` <span class="muted">— ${esc(x.c)}</span>`:""}</div></div>`,stamp(i.at));
     return drow(A,`<span class="g">${x.m==="pv"?"p":x.j||"n"}</span>`,`<b>${esc(subjName(i.g.subjectId))}</b><div class="muted">${x.m==="pv"?"Pavėlavo":x.j?"Nedalyvavo — "+esc(JUST_NAME[x.j]):"Nedalyvavo (nepateisinta)"}</div>`,stamp(i.at));}).join(""));};
 
 /* ---- Pamokos (tema, klasės darbas, namų darbai) ---- */
 VIEWS.s_lessons=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();const have=new Set();studentGroups(sid).forEach(g=>G(g.id).lessons.forEach(l=>{if(l.topic||l.cw||l.hw)have.add(l.d.slice(0,7));}));const tabs=monthTabs("lMonth",have);const mon=ui.lMonth;const list=[];
   studentGroups(sid).forEach(g=>G(g.id).lessons.filter(l=>l.d.startsWith(mon)&&(l.topic||l.cw||l.hw)).forEach(l=>list.push({...l,g})));
-  const days=[...new Set(list.map(x=>x.d))].sort().reverse();
-  return `<h1>Pamokos</h1><p class="lead">Pamokų temos, klasės darbai ir namų darbai, kuriuos įrašė mokytojai.</p>${tabs}${days.length?dayBlocks(days,d=>list.filter(x=>x.d===d).sort((a,b)=>(a.no||0)-(b.no||0)).map(l=>drow(`data-act="stuLesson" data-g="${l.g.id}" data-d="${l.d}"`,`<span class="lno">${l.no?l.no+" pam.":""}</span>`,
+  const days=[...new Set(list.map(x=>kDate(x.d)))].sort().reverse();
+  return `<h1>Pamokos</h1><p class="lead">Pamokų temos, klasės darbai ir namų darbai, kuriuos įrašė mokytojai.</p>${tabs}${days.length?dayBlocks(days,d=>list.filter(x=>kDate(x.d)===d).sort((a,b)=>(a.no||0)-(b.no||0)).map(l=>drow(`data-act="stuLesson" data-g="${l.g.id}" data-d="${l.d}"`,`<span class="lno">${l.no?l.no+" pam.":""}</span>`,
     `<div class="dtxt-in${stripe(l.t)}"><b>${esc(subjName(l.g.subjectId))}</b>${l.t?`<div>${typeLbl(l.t)}</div>`:""}${l.topic?`<div><b>Tema:</b> ${esc(l.topic)}</div>`:""}${l.cw?`<div><b>Klasės darbas:</b> ${esc(l.cw)}</div>`:""}${l.hw?`<div><b>Namų darbai:</b> ${esc(l.hw)}${l.hwDue?` <span class="tag">atlikti iki ${l.hwDue}</span>`:""}</div>`:""}</div>`)).join("")):'<div class="sheet empty">Šį mėnesį pamokų įrašų nėra.</div>'}`;};
 
 /* ---- Namų darbai: surūšiuoti pagal atlikimo datą ---- */
 VIEWS.s_hw=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();const t=TODAY();const list=[];
-  studentGroups(sid).forEach(g=>G(g.id).lessons.filter(l=>l.hw).forEach(l=>list.push({...l,g,due:l.hwDue||l.d})));
+  studentGroups(sid).forEach(g=>G(g.id).lessons.filter(l=>l.hw).forEach(l=>list.push({...l,g,due:l.hwDue||kDate(l.d)})));
   const next=ui.hwTab!=="past";const sel_=list.filter(x=>next?x.due>=t:x.due<t).sort((a,b)=>next?lsort(a.due,b.due):lsort(b.due,a.due)).slice(0,next?200:60);
   const badge=d=>d===t?'<span class="hw-b today">Šiandien</span>':d===addDays(t,1)?'<span class="hw-b soon">Rytoj</span>':d<t?`<span class="hw-b past">${d}</span>`:"";
   const days=[...new Set(sel_.map(x=>x.due))];
   return `<h1>Namų darbai</h1><div class="tabs"><button aria-selected="${next}" data-act="hwTab" data-v="next">Artimiausi namų darbai</button><button aria-selected="${!next}" data-act="hwTab" data-v="past">Ankstesni</button></div>
   <p class="info-line">Sąrašas surūšiuotas pagal namų darbų <b>atlikimo datą</b></p>
   ${days.length?days.map(d=>`<div class="hw-day"><b>${WD_FULL[wdOf(d)]}</b><span>${d}</span></div>${sel_.filter(x=>x.due===d).map(x=>`<button class="hw-card" data-act="stuLesson" data-g="${x.g.id}" data-d="${x.d}"><span class="hw-top"><b>${esc(subjName(x.g.subjectId))}</b>${badge(x.due)}</span>
-    <span class="hw-lbl">Namų darbai:</span><span class="hw-txt">${esc(x.hw)}</span><span class="hw-foot">${esc(uNameFL(x.g.teacherId))}, <b>įvedė:</b> ${x.hwAt?stamp(x.hwAt).replace("<br>"," "):x.d}${x.hwDue?"":" · atlikimo data nenurodyta"}</span></button>`).join("")}`).join(""):`<div class="sheet empty">${next?"Artimiausių namų darbų nėra.":"Ankstesnių namų darbų nėra."}</div>`}`;};
+    <span class="hw-lbl">Namų darbai:</span><span class="hw-txt">${esc(x.hw)}</span><span class="hw-foot">${esc(uNameFL(x.g.teacherId))}, <b>įvedė:</b> ${x.hwAt?stamp(x.hwAt).replace("<br>"," "):kDate(x.d)}${x.hwDue?"":" · atlikimo data nenurodyta"}</span></button>`).join("")}`).join(""):`<div class="sheet empty">${next?"Artimiausių namų darbų nėra.":"Ankstesnių namų darbų nėra."}</div>`}`;};
 
 /* ---- Trimestrai / pusmečiai: tik pasirinkto laikotarpio pažymiai ir išvesti įvertinimai ---- */
 VIEWS.s_periods=()=>{const n=needChild();if(n)return n;return periodsReport(viewedStudent(),"<h1>Trimestrai / pusmečiai</h1>");};
@@ -89,8 +89,8 @@ function periodsReport(sid,head){const sys=sysOfStudent(sid);const ps=periodsSys
     <p class="small muted">Metinis įvertinimas — laikotarpių įvertinimų vidurkis, suapvalintas matematiškai.</p>`;}
   const p=core.settings.periods[pid];
   const rows=gs.map(g=>{const grs=sGrades(g.id,sid,pid);const isk=(g.evalSys||"10")==="isk";const pg=G(g.id).pg[sid]||{};const x=(g.extra||{})[pid]&&pg["X"+pid]!=null?`<div class="small muted">${esc(g.extra[pid])}: ${VLABEL[pg["X"+pid]]??pg["X"+pid]}</div>`:"";
-    const gl=grs.map(y=>`<span class="dg" title="${esc(y.d)} · ${esc(TYPE_NAME[y.t]||"")}${y.c?" · "+esc(y.c):""}">${chip(y,false)}<small>${y.d.slice(5)}</small></span>`).join("");
-    return `<tr><td><b>${esc(subjName(g.subjectId))}</b><div class="small muted">${esc(uNameFL(g.teacherId))}${progTag(g,sid)}</div><div class="dgrades only-m pr-m">${gl}</div>${x?`<div class="only-m">${x}</div>`:""}</td><td class="only-d"><div class="dgrades">${grs.map(y=>`<span class="dg" title="${esc(y.d)} · ${esc(TYPE_NAME[y.t]||"")}${y.c?" · "+esc(y.c):""}">${chip(y,false)}<small>${y.d.slice(5)}</small></span>`).join("")||'<span class="muted small">—</span>'}</div>${x}</td>
+    const gl=grs.map(y=>`<span class="dg" title="${esc(kDate(y.d))} · ${esc(TYPE_NAME[y.t]||"")}${y.c?" · "+esc(y.c):""}">${chip(y,false)}<small>${y.d.slice(5,10)}</small></span>`).join("");
+    return `<tr><td><b>${esc(subjName(g.subjectId))}</b><div class="small muted">${esc(uNameFL(g.teacherId))}${progTag(g,sid)}</div><div class="dgrades only-m pr-m">${gl}</div>${x?`<div class="only-m">${x}</div>`:""}</td><td class="only-d"><div class="dgrades">${grs.map(y=>`<span class="dg" title="${esc(kDate(y.d))} · ${esc(TYPE_NAME[y.t]||"")}${y.c?" · "+esc(y.c):""}">${chip(y,false)}<small>${y.d.slice(5,10)}</small></span>`).join("")||'<span class="muted small">—</span>'}</div>${x}</td>
       <td class="num">${isk?"":`<b>${fmtAvg(avgOf(grs))}</b>`}</td><td class="num"><b class="big">${vchip(pg[pid])}</b></td></tr>`;}).join("");
   return `${head}${tabs}<p class="lead"><span class="only-m"><b>${PNAME[pid]}</b></span><span class="only-d">${PNAME[pid]}: ${p.from} – ${p.to}. Rodomi tik šio laikotarpio pažymiai ir išvesti įvertinimai.</span></p>
   <div class="sheet scroll"><table class="pr-t"><thead><tr><th>Dalykas</th><th class="only-d">Pažymiai</th><th class="num">Vidurkis</th><th class="num"><span class="only-d">Išvestas įvertinimas</span><span class="only-m">Pagr.</span></th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="muted">Mokinys nepriskirtas grupėms.</td></tr>'}</tbody></table></div>
@@ -102,8 +102,8 @@ VIEWS.s_tt=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();cons
   const lessons=Object.entries(slots).filter(([k])=>k.endsWith("|"+day)).flatMap(([,v])=>v).sort((a,b)=>a.no-b.no);
   const dayList=`<div class="tt-days" role="tablist">${[0,1,2,3,4].map(i=>`<button role="tab" aria-selected="${ui.ttDay===i}" data-act="ttDay" data-v="${i}" class="${addDays(mon,i)===TODAY()?"is-today":""}">${WD[i]}</button>`).join("")}</div>
    <div class="tt-h"><b>${day===TODAY()?"Šiandienos pamokos":WD_FULL[wdOf(day)]+" pamokos"}</b><span>${day}</span></div>
-   ${isHoliday(day)?'<div class="sheet empty">Laisva diena</div>':lessons.length?`<div class="tt-list">${lessons.map(x=>{const g=grp(x.gid);const b=bellOf(x.no);const l=G(x.gid).lessons.find(y=>y.d===day);
-     return `<button class="tt-row" data-act="stuLesson" data-g="${x.gid}" data-d="${day}"><span class="tt-no">${x.no}</span><span class="tt-time">${b?`${b[0]}<br>${b[1]}`:""}</span><span class="tt-subj"><b>${esc(subjName(g.subjectId))}</b><span>${esc(uNameFL(g.teacherId))}</span>${l&&l.topic?`<span class="tt-topic">${esc(l.topic)}</span>`:""}</span></button>`;}).join("")}</div>`:'<div class="sheet empty">Pamokų nėra.</div>'}`;
+   ${isHoliday(day)?'<div class="sheet empty">Laisva diena</div>':lessons.length?`<div class="tt-list">${lessons.map(x=>{const g=grp(x.gid);const b=bellOf(x.no);const l=G(x.gid).lessons.find(y=>y.d===x.d);
+     return `<button class="tt-row" data-act="stuLesson" data-g="${x.gid}" data-d="${x.d}"><span class="tt-no">${x.no}</span><span class="tt-time">${b?`${b[0]}<br>${b[1]}`:""}</span><span class="tt-subj"><b>${esc(subjName(g.subjectId))}</b><span>${esc(uNameFL(g.teacherId))}</span>${l&&l.topic?`<span class="tt-topic">${esc(l.topic)}</span>`:""}</span></button>`;}).join("")}</div>`:'<div class="sheet empty">Pamokų nėra.</div>'}`;
   return `<h1>Tvarkaraštis</h1><p class="lead only-d">Savaitės pamokos su temomis, namų darbais, gautais įvertinimais ir lankomumu.</p><div class="bar">${weekNav()}</div>
   <div class="only-d">${weekGrid(gids,{sid})}</div><div class="only-m">${dayList}</div>`;};
 VIEWS.s_att=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();const sys=sysOfStudent(sid);const pOpts=periodOpts(sys,true);ensureIn("stPid",pOpts,curPeriod(sys));
@@ -111,18 +111,18 @@ VIEWS.s_att=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();con
   const nn=rows.filter(r=>r.m==="n"),un=nn.filter(r=>!r.j).length,pv=rows.filter(r=>r.m==="pv").length;
   return `<h1>Lankomumas</h1><div class="bar">${sel("stPid",pOpts,ui.stPid,"Laikotarpis")}</div>
   <div class="stats"><div><b>${nn.length}</b>praleista</div><div><b>${nn.length-un}</b>pateisinta</div><div><b class="${un?"bad":""}">${un}</b>nepateisinta</div><div><b>${pv}</b>pavėlavimų</div></div>
-  <div class="sheet scroll">${rows.length?`<table><thead><tr><th>Data</th><th>Dalykas</th><th>Žyma</th><th>Pateisinimas</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.d}</td><td>${esc(r.gn)}</td><td><span class="att ${r.m==="pv"?"p":r.j?"j":""}">${r.m==="pv"?"p":r.j||"n"}</span></td><td>${r.m==="pv"?"Pavėlavo":r.j?esc(JUST_NAME[r.j]):'<span style="color:var(--pen)">Nepateisinta — kreipkitės į klasės vadovą</span>'}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">Praleistų pamokų nėra.</div>`}</div>`;};
+  <div class="sheet scroll">${rows.length?`<table><thead><tr><th>Data</th><th>Dalykas</th><th>Žyma</th><th>Pateisinimas</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${kDate(r.d)}</td><td>${esc(r.gn)}</td><td><span class="att ${r.m==="pv"?"p":r.j?"j":""}">${r.m==="pv"?"p":r.j||"n"}</span></td><td>${r.m==="pv"?"Pavėlavo":r.j?esc(JUST_NAME[r.j]):'<span style="color:var(--pen)">Nepateisinta — kreipkitės į klasės vadovą</span>'}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">Praleistų pamokų nėra.</div>`}</div>`;};
 /* ---- Atsiskaitomųjų darbų grafikas ---- */
 VIEWS.s_works=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();const gs=studentGroups(sid);
   const list=[];gs.forEach(g=>G(g.id).lessons.filter(l=>l.t).forEach(l=>list.push({d:l.d,g,t:l.t,topic:l.topic})));core.works.filter(w=>gs.some(g=>g.id===w.g)&&!list.some(x=>x.g.id===w.g&&x.d===w.d)).forEach(w=>list.push({d:w.d,g:grp(w.g),t:w.t,topic:w.topic}));
   const ms=yearMonths(new Set(list.map(x=>x.d.slice(0,7))));if(!ms.includes(ui.wMonth))ui.wMonth=ms.includes(TODAY().slice(0,7))?TODAY().slice(0,7):ms[ms.length-1];
   const i=ms.indexOf(ui.wMonth);const mon=ui.wMonth;const rows=list.filter(x=>x.d.startsWith(mon)).sort((a,b)=>lsort(b.d,a.d));
   return `<h1>Atsiskaitomųjų darbų grafikas</h1><div class="mnav"><button data-act="wMonth" data-v="${ms[i-1]||""}" ${i<=0?"disabled":""} aria-label="Ankstesnis mėnuo">${ICON.chevL}</button><b>${mon.slice(0,4)} ${MONTHS[+mon.slice(5)-1].toUpperCase()}</b><button data-act="wMonth" data-v="${ms[i+1]||""}" ${i>=ms.length-1?"disabled":""} aria-label="Kitas mėnuo">${ICON.chev}</button></div>
-  ${rows.length?`<div class="works">${rows.map(x=>{const gr=G(x.g.id).grades.find(y=>y.s===sid&&y.d===x.d);return `<button class="wk" data-act="stuLesson" data-g="${x.g.id}" data-d="${x.d}"><span class="wk-d"><b>${+x.d.slice(8)}</b><span>${WD[wdOf(x.d)]}</span></span><span class="wk-r vbar ${barCls(x.t)}"><b class="wk-s">${esc(subjName(x.g.subjectId))}</b><span class="wk-t">${esc(TYPE_NAME[x.t]||x.t)}</span>${x.topic?`<span><b>Tema:</b> ${esc(x.topic)}</span>`:""}${gr?`<span><b>Įvertinimas:</b> ${chip(gr,false)}</span>`:""}</span></button>`;}).join("")}</div>`:'<div class="sheet empty">Šį mėnesį atsiskaitomųjų darbų nėra.</div>'}`;};
+  ${rows.length?`<div class="works">${rows.map(x=>{const gr=G(x.g.id).grades.find(y=>y.s===sid&&y.d===x.d);return `<button class="wk" data-act="stuLesson" data-g="${x.g.id}" data-d="${x.d}"><span class="wk-d"><b>${+x.d.slice(8,10)}</b><span>${WD[wdOf(x.d)]}</span></span><span class="wk-r vbar ${barCls(x.t)}"><b class="wk-s">${esc(subjName(x.g.subjectId))}</b><span class="wk-t">${esc(TYPE_NAME[x.t]||x.t)}</span>${x.topic?`<span><b>Tema:</b> ${esc(x.topic)}</span>`:""}${gr?`<span><b>Įvertinimas:</b> ${chip(gr,false)}</span>`:""}</span></button>`;}).join("")}</div>`:'<div class="sheet empty">Šį mėnesį atsiskaitomųjų darbų nėra.</div>'}`;};
 
 /* ---- Pagyrimai ir pastabos ---- */
 VIEWS.s_notes=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();const list=[];studentGroups(sid).forEach(g=>G(g.id).notes.filter(x=>x.s===sid).forEach(x=>list.push({...x,g})));list.sort((a,b)=>lsort(b.at||b.d,a.at||a.d));
-  return `<h1>Pagyrimai ir pastabos</h1>${list.length?`<div class="notes">${list.map(x=>`<div class="nt-card"><span class="nt-ic note-${x.kind}">${ICON.note}</span><div class="nt-b"><div class="nt-top"><b>${NOTE_NAME[x.kind]||""}</b><span>${x.d.slice(5)}d</span></div>
+  return `<h1>Pagyrimai ir pastabos</h1>${list.length?`<div class="notes">${list.map(x=>`<div class="nt-card"><span class="nt-ic note-${x.kind}">${ICON.note}</span><div class="nt-b"><div class="nt-top"><b>${NOTE_NAME[x.kind]||""}</b><span>${x.d.slice(5,10)}d</span></div>
     <div class="nt-subj">${esc(subjName(x.g.subjectId))} (${esc(uNameFL(x.by||x.g.teacherId))})</div><div class="nt-txt">${esc(x.text)}</div><div class="nt-who">${esc(uNameFL(sid))}</div></div></div>`).join("")}</div>`:'<div class="sheet empty">Įrašų nėra.</div>'}`;};
 VIEWS.s_soc=()=>{const n=needChild();if(n)return n;const sid=viewedStudent();const a=social.list.filter(x=>x.hours[sid]).sort((x,y)=>lsort(y.d,x.d));
   return `<h1>Socialinė-pilietinė veikla</h1><div class="sheet pad socsum"><div class="small muted">Atlikta${socPlan(sid)!=null?" iš metinio plano":""}</div><div class="socbig">${socProgress(sid)}</div></div>

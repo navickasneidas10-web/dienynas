@@ -5,7 +5,7 @@ const DEFAULT_BELLS=[["08:00","08:45"],["08:55","09:40"],["09:50","10:35"],["10:
 const bellOf=no=>{const b=(core.settings.bells||DEFAULT_BELLS)[(+no||0)-1];return b&&b[0]&&b[1]?b:null;};
 const MONTHS_GEN=["sausio","vasario","kovo","balandžio","gegužės","birželio","liepos","rugpjūčio","rugsėjo","spalio","lapkričio","gruodžio"];
 const WD_FULL=["Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktadienis","Šeštadienis","Sekmadienis"];
-const dayGen=d=>`${MONTHS_GEN[+d.slice(5,7)-1]} ${d.slice(8)} d.`;
+const dayGen=d=>`${MONTHS_GEN[+d.slice(5,7)-1]} ${d.slice(8,10)} d.`;
 const ICON={
  burger:'<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M3 6h18v2.2H3zm0 5h18v2.2H3zm0 5h18v2.2H3z"/></svg>',
  user:'<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><circle cx="12" cy="8" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.8 21c.6-4.3 4-6.6 8.2-6.6s7.6 2.3 8.2 6.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
@@ -63,7 +63,11 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const clone=o=>JSON.parse(JSON.stringify(o));
 const uid=()=>crypto.randomUUID();
 const realToday=()=>new Date().toISOString().slice(0,10);
-const fmtD=d=>{const[y,m,dd]=d.split("-");return `${dd}.${m}`};
+const fmtD=d=>{const[y,m,dd]=String(d).slice(0,10).split("-");return `${dd}.${m}`};
+/* Pamokos raktas: data, o antra ir trečia tos dienos pamoka — „data#2“, „data#3“ */
+const lkey=(d,slot)=>(+slot||1)>1?`${d}#${+slot}`:d;
+const kDate=k=>String(k||"").slice(0,10);
+const kSlot=k=>+(String(k||"").split("#")[1]||1);
 const fmtFull=d=>d||"";
 const ms=d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10));
 const iso=t=>new Date(t).toISOString().slice(0,10);
@@ -98,16 +102,18 @@ const sysOfGroup=g=>g&&g.students.length?sysOfStudent(g.students[0]):core.settin
 const periodsG=g=>periodsSys(sysOfGroup(g));
 function yearRange(){const p=core.settings.periods;const froms=[p.P1.from,p.T1.from].sort(),tos=[p.P2.to,p.T3.to].sort();return{from:froms[0],to:tos[1]};}
 function TODAY(){const r=yearRange();const t=realToday();return t<r.from?r.from:t>r.to?r.to:t;}
-function inPeriod(d,pid){if(pid==="Y"){const r=yearRange();return d>=r.from&&d<=r.to;}const p=core.settings.periods[pid];return p&&d>=p.from&&d<=p.to;}
+function inPeriod(d,pid){d=kDate(d);if(pid==="Y"){const r=yearRange();return d>=r.from&&d<=r.to;}const p=core.settings.periods[pid];return p&&d>=p.from&&d<=p.to;}
 function ltHolidays(){const y=core.settings.yearStart;return new Set([`${y}-11-01`,`${y}-11-02`,`${y}-12-24`,`${y}-12-25`,`${y}-12-26`,`${y+1}-01-01`,`${y+1}-02-16`,`${y+1}-03-11`,`${y+1}-05-01`]);}
-let _hol=null;function isHoliday(d){_hol??=ltHolidays();return _hol.has(d)||core.settings.holidays.some(h=>d>=h.from&&d<=h.to);}
+let _hol=null;function isHoliday(d){d=kDate(d);_hol??=ltHolidays();return _hol.has(d)||core.settings.holidays.some(h=>d>=h.from&&d<=h.to);}
 
 /* ---- Tvarkaraštis ---- */
-const ttUntil=t=>t.weeks?addDays(t.from,t.weeks*7-1):yearRange().to;
+const ttUntil=t=>t.to?t.to:t.weeks?addDays(t.from,t.weeks*7-1):yearRange().to;
 function ttOccurs(t,d){if(d<t.from||d>ttUntil(t)||wdOf(d)!==t.wd||isHoliday(d))return false;const r=yearRange();if(d<r.from||d>r.to)return false;
   if(t.parity&&t.parity!=="all"){const idx=Math.floor((ms(d)-ms(mondayOf(r.from)))/(7*864e5));const odd=idx%2===0;if((t.parity==="odd")!==odd)return false;}return true;}
-function occDates(gid,from,to){const out=new Map();core.timetable.filter(t=>t.g===gid).forEach(t=>{let d=t.from<from?from:t.from;const end=ttUntil(t)<to?ttUntil(t):to;
-  d=addDays(d,(t.wd-wdOf(d)+7)%7);for(;d<=end;d=addDays(d,7))if(ttOccurs(t,d))out.set(d,t.no);});return out;}
+/* Grąžina Map: pamokos raktas -> pamokos Nr. Kelios pamokos tą pačią dieną gauna raktus data, data#2, data#3 */
+function occDates(gid,from,to){from=kDate(from);to=kDate(to);const byDay=new Map();core.timetable.filter(t=>t.g===gid).forEach(t=>{let d=t.from<from?from:t.from;const end=ttUntil(t)<to?ttUntil(t):to;
+  d=addDays(d,(t.wd-wdOf(d)+7)%7);for(;d<=end;d=addDays(d,7))if(ttOccurs(t,d)){const a=byDay.get(d)||[];if(!a.includes(t.no))a.push(t.no);byDay.set(d,a);}});
+  const out=new Map();[...byDay.keys()].sort().forEach(d=>byDay.get(d).sort((a,b)=>a-b).forEach((no,i)=>out.set(lkey(d,i+1),no)));return out;}
 
 /* ---- Vertinimas ---- */
 const numeric=gs=>gs.filter(g=>typeof g.v==="number");
@@ -119,7 +125,7 @@ const VTITLE={neat:"Neatsiskaitė",isk:"Įskaityta",neisk:"Neįskaityta",atl:"At
 const GRADE_VALUES=["1","2","3","4","5","6","7","8","9","10","isk","neisk","atl","pp","np","neat"];
 /* Pažymiai rodomi paprastu tekstu; raudonai — tik už kontrolinį darbą */
 function gClass(v,t){return t==="KD"?"kd":"";}
-function chip(g,title=true){const t=title&&g.d?` title="${esc(g.d)} · ${esc(TYPE_NAME[g.t]||g.t||"")}${g.c?" · "+esc(g.c):""}"`:"";return `<span class="g ${gClass(g.v,g.t)}"${t}>${VLABEL[g.v]??g.v}</span>`;}
+function chip(g,title=true){const t=title&&g.d?` title="${esc(kDate(g.d))} · ${esc(TYPE_NAME[g.t]||g.t||"")}${g.c?" · "+esc(g.c):""}"`:"";return `<span class="g ${gClass(g.v,g.t)}"${t}>${VLABEL[g.v]??g.v}</span>`;}
 const vchip=v=>v==null?'<span class="muted">—</span>':chip({v},false);
 function sGrades(gid,sid,pid){return G(gid).grades.filter(g=>g.s===sid&&inPeriod(g.d,pid)).sort((a,b)=>lsort(a.d,b.d));}
 function suggest(g,sid,pid){const gs=sGrades(g.id,sid,pid);if((g.evalSys||"10")==="isk"){const i=gs.filter(x=>x.v==="isk").length,n=gs.filter(x=>x.v==="neisk").length;return i+n?(i>=n?"isk":"neisk"):null;}return roundBy(avgOf(gs),core.settings.rounding);}
@@ -137,7 +143,7 @@ const isSubGroup=(g,u)=>!!u&&g.teacherId!==u.id;
 /* Pamokų pildymui: savos grupės + vykstančių ir būsimų pavadavimų grupės (rodomos tik pavadavimo dienos) */
 function journalGroups(tid){const t=TODAY();const subT=new Set(core.subs.filter(s=>s.to===tid&&s.dTo>=t).map(s=>s.from));
   return [...core.groups.filter(g=>g.teacherId===tid),...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==tid)];}
-function canEditDate(g,d){const u=me();if(!u||!hasRole(u,"teacher"))return false;if(g.teacherId===u.id)return true;return core.subs.some(s=>s.from===g.teacherId&&s.to===u.id&&d>=s.dFrom&&d<=s.dTo);}
+function canEditDate(g,d){d=kDate(d);const u=me();if(!u||!hasRole(u,"teacher"))return false;if(g.teacherId===u.id)return true;return core.subs.some(s=>s.from===g.teacherId&&s.to===u.id&&d>=s.dFrom&&d<=s.dTo);}
 function teacherGroups(tid,withSubs=true){const own=core.groups.filter(g=>g.teacherId===tid);if(!withSubs)return own;const subT=new Set(activeSubsTo(tid).map(s=>s.from));return [...own,...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==tid)];}
 function headClassesOf(tid){const d=TODAY();const own=core.classes.filter(c=>c.headTeacherId===tid);const sub=core.headSubs.filter(h=>h.to===tid&&d>=h.dFrom&&d<=h.dTo).map(h=>cls(h.classId)).filter(Boolean);return [...own,...sub.filter(c=>!own.includes(c))];}
 function studentGroups(sid){return core.groups.filter(g=>g.students.includes(sid));}

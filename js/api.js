@@ -34,8 +34,9 @@ async function loadSettingsPublic() {
 function mapSettings(s) {
   return { school: s.school, yearStart: s.year_start, system: s.system, rounding: Number(s.rounding), periods: s.periods, holidays: s.holidays || [], bells: Array.isArray(s.bells) ? s.bells : DEFAULT_BELLS.slice(), demo: false };
 }
-async function loadAll() {
+async function loadAll(guard) {
   const res = await Promise.all(TABLES.map(fetchAll));
+  if (guard && !guard()) return false;
   const D = Object.fromEntries(TABLES.map((t, i) => [t, res[i]]));
   const c = emptyCore();
   if (D.settings[0]) c.settings = mapSettings(D.settings[0]);
@@ -46,7 +47,7 @@ async function loadAll() {
     evalSys: x.eval_sys, extra: x.extra || {}, planId: x.plan_id || "", students: [], programs: {} }));
   const gi = Object.fromEntries(c.groups.map(g => [g.id, g]));
   D.group_students.forEach(x => { const g = gi[x.group_id]; if (!g) return; g.students.push(x.student_id); if (x.program) g.programs[x.student_id] = x.program; });
-  c.timetable = D.timetable.map(x => ({ id: x.id, g: x.group_id, wd: x.wd, no: x.no, from: x.date_from, weeks: x.weeks, parity: x.parity }));
+  c.timetable = D.timetable.map(x => ({ id: x.id, g: x.group_id, wd: x.wd, no: x.no, from: x.date_from, to: x.date_to || null, weeks: x.weeks, parity: x.parity }));
   c.works = D.works.map(x => ({ id: x.id, g: x.group_id, d: x.date, t: x.type, topic: x.topic }));
   c.prejust = D.prejust.map(x => ({ id: x.id, s: x.student_id, from: x.date_from, to: x.date_to, j: x.code }));
   c.subs = D.subs.map(x => ({ id: x.id, from: x.from_teacher, to: x.to_teacher, dFrom: x.date_from, dTo: x.date_to }));
@@ -60,10 +61,10 @@ async function loadAll() {
 
   const g = {};
   const GG = id => (g[id] ??= { lessons: [], grades: [], att: [], pg: {}, notes: [] });
-  D.lessons.forEach(x => GG(x.group_id).lessons.push({ id: x.id, d: x.date, no: x.no, t: x.type, topic: x.topic, cw: x.classwork || "", hw: x.hw, hwDue: x.hw_due || "", hwAt: x.hw_at || "" }));
-  D.grades.forEach(x => GG(x.group_id).grades.push({ id: x.id, s: x.student_id, d: x.date, t: x.type, v: parseV(x.value), c: x.comment, by: x.created_by, at: x.created_at }));
-  D.attendance.forEach(x => GG(x.group_id).att.push({ id: x.id, s: x.student_id, d: x.date, m: x.mark, j: x.just, at: x.created_at || "" }));
-  D.notes.forEach(x => GG(x.group_id).notes.push({ id: x.id, s: x.student_id, d: x.date, kind: x.kind, text: x.text, by: x.created_by, at: x.created_at || "" }));
+  D.lessons.forEach(x => GG(x.group_id).lessons.push({ id: x.id, d: lkey(x.date, x.slot), no: x.no, t: x.type, topic: x.topic, cw: x.classwork || "", hw: x.hw, hwDue: x.hw_due || "", hwAt: x.hw_at || "" }));
+  D.grades.forEach(x => GG(x.group_id).grades.push({ id: x.id, s: x.student_id, d: lkey(x.date, x.slot), t: x.type, v: parseV(x.value), c: x.comment, by: x.created_by, at: x.created_at }));
+  D.attendance.forEach(x => GG(x.group_id).att.push({ id: x.id, s: x.student_id, d: lkey(x.date, x.slot), m: x.mark, j: x.just, at: x.created_at || "" }));
+  D.notes.forEach(x => GG(x.group_id).notes.push({ id: x.id, s: x.student_id, d: lkey(x.date, x.slot), kind: x.kind, text: x.text, by: x.created_by, at: x.created_at || "" }));
   D.period_grades.forEach(x => { const pg = GG(x.group_id).pg; (pg[x.student_id] ??= {})[x.period] = parseV(x.value); });
 
   const hours = {};
@@ -82,8 +83,15 @@ async function loadAll() {
 }
 
 /* ---------- Rašymas ---------- */
+/* Vykstantys įrašymai: kol jie nesibaigė, duomenų iš serverio iš naujo neįkeliame,
+   kad ką tik įvesti įrašai neišnyktų ir vėl neatsirastų. */
+let pendingWrites = 0, writeSeq = 0, lastWrite = 0;
 async function W(promise, quiet) {
-  const { data, error } = await promise;
+  pendingWrites++; writeSeq++; lastWrite = Date.now();
+  let res;
+  try { res = await promise; } catch (e) { res = { data: null, error: e }; }
+  finally { pendingWrites--; writeSeq++; lastWrite = Date.now(); }
+  const { data, error } = res;
   if (error) {
     console.error(error);
     if (!quiet) toast("Nepavyko išsaugoti: " + (error.message || "klaida"));
@@ -99,11 +107,11 @@ const R = {
   group: g => ({ id: g.id, name: g.name, subject_id: g.subjectId, teacher_id: g.teacherId, kind: g.kind, level: g.level || null, hours: g.hours,
     eval_sys: g.evalSys || "10", extra: g.extra || {}, plan_id: g.planId || null }),
   members: g => g.students.map(s => ({ group_id: g.id, student_id: s, program: (g.programs || {})[s] || null })),
-  tt: t => ({ id: t.id, group_id: t.g, wd: t.wd, no: t.no, date_from: t.from, weeks: t.weeks, parity: t.parity || "all" }),
-  lesson: (gid, l) => ({ group_id: gid, date: l.d, no: l.no || null, type: l.t || "", topic: l.topic || "", classwork: l.cw || "", hw: l.hw || "", hw_due: l.hwDue || null, ...(l.hwAt ? { hw_at: l.hwAt } : {}) }),
-  grade: (gid, x) => ({ id: x.id, group_id: gid, student_id: x.s, date: x.d, type: x.t, value: String(x.v), comment: x.c || "", created_by: x.by || null }),
-  att: (gid, a) => ({ group_id: gid, student_id: a.s, date: a.d, mark: a.m, just: a.j || null, ...(a.at ? { created_at: a.at } : {}) }),
-  note: (gid, n) => ({ id: n.id, group_id: gid, student_id: n.s, date: n.d, kind: n.kind, text: n.text, created_by: n.by || null, ...(n.at ? { created_at: n.at } : {}) }),
+  tt: t => ({ id: t.id, group_id: t.g, wd: t.wd, no: t.no, date_from: t.from, weeks: t.weeks, parity: t.parity || "all", ...(t.to ? { date_to: t.to } : {}) }),
+  lesson: (gid, l) => ({ group_id: gid, date: kDate(l.d), slot: kSlot(l.d), no: l.no || null, type: l.t || "", topic: l.topic || "", classwork: l.cw || "", hw: l.hw || "", hw_due: l.hwDue || null, ...(l.hwAt ? { hw_at: l.hwAt } : {}) }),
+  grade: (gid, x) => ({ id: x.id, group_id: gid, student_id: x.s, date: kDate(x.d), slot: kSlot(x.d), type: x.t, value: String(x.v), comment: x.c || "", created_by: x.by || null }),
+  att: (gid, a) => ({ group_id: gid, student_id: a.s, date: kDate(a.d), slot: kSlot(a.d), mark: a.m, just: a.j || null, ...(a.at ? { created_at: a.at } : {}) }),
+  note: (gid, n) => ({ id: n.id, group_id: gid, student_id: n.s, date: kDate(n.d), slot: kSlot(n.d), kind: n.kind, text: n.text, created_by: n.by || null, ...(n.at ? { created_at: n.at } : {}) }),
   work: w => ({ id: w.id, group_id: w.g, date: w.d, type: w.t, topic: w.topic || "" }),
   prejust: p => ({ id: p.id, student_id: p.s, date_from: p.from, date_to: p.to, code: p.j }),
   sub: s => ({ id: s.id, from_teacher: s.from, to_teacher: s.to, date_from: s.dFrom, date_to: s.dTo }),
@@ -124,17 +132,17 @@ const DB = {
     if (g.students.length && !(await DB.ins("group_students", R.members(g)))) return false;
     return true;
   },
-  lesson: (gid, l) => DB.up("lessons", R.lesson(gid, l), "group_id,date"),
-  att: (gid, a) => DB.up("attendance", R.att(gid, a), "group_id,student_id,date"),
-  delAtt: (gid, sid, d) => DB.del("attendance", { group_id: gid, student_id: sid, date: d }),
+  lesson: (gid, l) => DB.up("lessons", R.lesson(gid, l), "group_id,date,slot"),
+  att: (gid, a) => DB.up("attendance", R.att(gid, a), "group_id,student_id,date,slot"),
+  delAtt: (gid, sid, d) => DB.del("attendance", { group_id: gid, student_id: sid, date: kDate(d), slot: kSlot(d) }),
   pg: (gid, sid, period, v) => DB.up("period_grades", { group_id: gid, student_id: sid, period, value: String(v), updated_at: new Date().toISOString() }, "group_id,student_id,period"),
   delPg: (gid, sid, period) => DB.del("period_grades", { group_id: gid, student_id: sid, period }),
   async bulk(table, rows, size = 500) {
     for (let i = 0; i < rows.length; i += size) { if (!(await DB.ins(table, rows.slice(i, i + size)))) return false; }
     return true;
   },
-  async adminFn(action, personId) {
-    const { data, error } = await sb.functions.invoke("admin-users", { body: { action, personId } });
+  async adminFn(action, personId, extra) {
+    const { data, error } = await sb.functions.invoke("admin-users", { body: { action, personId, ...(extra || {}) } });
     if (error || (data && data.error)) {
       let msg = (data && data.error) || error.message || "klaida";
       try { const b = await error.context.json(); if (b && b.error) msg = b.error; } catch (e) {}
@@ -151,7 +159,14 @@ function scheduleReload(ms = 1200) {
   clearTimeout(reloadT);
   reloadT = setTimeout(async () => {
     if (!authUser) return;
-    try { await loadAll(); softRender(); } catch (e) { console.error(e); }
+    // Palaukiame, kol baigsis visi įrašymai ir 2,5 s nebus naujų
+    if (pendingWrites > 0 || Date.now() - lastWrite < 2500) { scheduleReload(1000); return; }
+    const seq = writeSeq;
+    try {
+      const ok = await loadAll(() => seq === writeSeq && pendingWrites === 0);
+      if (ok === false) { scheduleReload(1000); return; }
+      softRender();
+    } catch (e) { console.error(e); }
   }, ms);
 }
 function subscribeRealtime() {
