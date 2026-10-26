@@ -44,11 +44,13 @@ async function loadAll(guard) {
   c.classes = D.classes.map(x => ({ id: x.id, name: x.name, level: x.level, system: x.system, headTeacherId: x.head_teacher_id || "", socialPlan: x.social_plan == null ? null : Number(x.social_plan) }));
   c.subjects = D.subjects.map(x => ({ id: x.id, name: x.name, kind: x.kind, parentId: x.parent_id || "", code: x.code || "" }));
   c.plans = D.plans.map(x => ({ id: x.id, ownerId: x.owner_id, name: x.name, desc: x.descr || "", subjectId: x.subject_id || "", topics: x.topics || [] }));
-  c.groups = D.groups.map(x => ({ id: x.id, name: x.name, subjectId: x.subject_id, teacherId: x.teacher_id, kind: x.kind, level: x.level || "", hours: x.hours,
+  c.groups = D.groups.map(x => ({ id: x.id, name: x.name, subjectId: x.kind === "burelis" ? "nf:" + x.id : x.subject_id, teacherId: x.teacher_id, kind: x.kind, level: x.level || "", hours: x.hours,
     evalSys: x.eval_sys, extra: x.extra || {}, planId: x.plan_id || "", students: [], programs: {} }));
+  // Būreliams sukuriamas „virtualus“ dalykas su būrelio pavadinimu (DB jo nėra)
+  c.groups.filter(g => g.kind === "burelis").forEach(g => c.subjects.push({ id: g.subjectId, name: g.name, kind: "nf", parentId: "", code: "", virtual: true }));
   const gi = Object.fromEntries(c.groups.map(g => [g.id, g]));
   D.group_students.forEach(x => { const g = gi[x.group_id]; if (!g) return; g.students.push(x.student_id); if (x.program) g.programs[x.student_id] = x.program; });
-  c.timetable = D.timetable.map(x => ({ id: x.id, g: x.group_id, wd: x.wd, no: x.no, from: x.date_from, to: x.date_to || null, weeks: x.weeks, parity: x.parity }));
+  c.timetable = D.timetable.map(x => ({ id: x.id, g: x.group_id, wd: x.wd, no: x.no, from: x.date_from, to: x.date_to || null, tFrom: x.t_from || "", tTo: x.t_to || "", weeks: x.weeks, parity: x.parity }));
   c.works = D.works.map(x => ({ id: x.id, g: x.group_id, d: x.date, t: x.type, topic: x.topic }));
   c.prejust = D.prejust.map(x => ({ id: x.id, s: x.student_id, from: x.date_from, to: x.date_to, j: x.code }));
   c.subs = D.subs.map(x => ({ id: x.id, from: x.from_teacher, to: x.to_teacher, dFrom: x.date_from, dTo: x.date_to }));
@@ -108,10 +110,10 @@ const R = {
   cls: c => ({ id: c.id, name: c.name, level: c.level, system: c.system, head_teacher_id: c.headTeacherId || null, social_plan: c.socialPlan == null ? null : c.socialPlan }),
   subject: s => ({ id: s.id, name: s.name, kind: s.kind, parent_id: s.parentId || null, code: s.code || null }),
   person: p => ({ id: p.id, role: p.role, ...(p.roles ? { roles: p.roles } : {}), first_name: p.first, last_name: p.last, class_id: p.classId || null, email: p.email || null, birth: p.birth || null }),
-  group: g => ({ id: g.id, name: g.name, subject_id: g.subjectId, teacher_id: g.teacherId, kind: g.kind, level: g.level || null, hours: g.hours,
+  group: g => ({ id: g.id, name: g.name, subject_id: g.subjectId && !String(g.subjectId).startsWith("nf:") ? g.subjectId : null, teacher_id: g.teacherId, kind: g.kind, level: g.level || null, hours: g.hours,
     eval_sys: g.evalSys || "10", extra: g.extra || {}, plan_id: g.planId || null }),
   members: g => g.students.map(s => ({ group_id: g.id, student_id: s, program: (g.programs || {})[s] || null })),
-  tt: t => ({ id: t.id, group_id: t.g, wd: t.wd, no: t.no, date_from: t.from, weeks: t.weeks, parity: t.parity || "all", ...(t.to ? { date_to: t.to } : {}) }),
+  tt: t => ({ id: t.id, group_id: t.g, wd: t.wd, no: t.no, date_from: t.from, weeks: t.weeks, parity: t.parity || "all", ...(t.to ? { date_to: t.to } : {}), ...(t.tFrom ? { t_from: t.tFrom, t_to: t.tTo } : {}) }),
   lesson: (gid, l) => ({ group_id: gid, date: kDate(l.d), slot: kSlot(l.d), no: l.no || null, type: l.t || "", topic: l.topic || "", classwork: l.cw || "", hw: l.hw || "", hw_due: l.hwDue || null, ...(l.hwAt ? { hw_at: l.hwAt } : {}) }),
   grade: (gid, x) => ({ id: x.id, group_id: gid, student_id: x.s, date: kDate(x.d), slot: kSlot(x.d), type: x.t, value: String(x.v), comment: x.c || "", created_by: x.by || null }),
   att: (gid, a) => ({ group_id: gid, student_id: a.s, date: kDate(a.d), slot: kSlot(a.d), mark: a.m, just: a.j || null, ...(a.at ? { created_at: a.at } : {}) }),

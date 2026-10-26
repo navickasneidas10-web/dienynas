@@ -94,6 +94,7 @@ const cls=id=>core.classes.find(c=>c.id===id);
 const clsName=id=>{const c=cls(id);return c?c.name:"—";};
 const classStudents=cid=>students().filter(s=>s.classId===cid).sort((a,b)=>lsort(a.last+a.first,b.last+b.first));
 const subj=id=>core.subjects.find(s=>s.id===id);
+const realSubjects=()=>core.subjects.filter(s=>!s.virtual);
 const subjName=id=>{const s=subj(id);return s?s.name:"(dalykas)";};
 const grp=id=>core.groups.find(g=>g.id===id);
 const G=gid=>{if(!gd[gid])gd[gid]={lessons:[],grades:[],att:[],pg:{},notes:[]};const g=gd[gid];g.lessons??=[];g.grades??=[];g.att??=[];g.pg??={};g.notes??=[];return g;};
