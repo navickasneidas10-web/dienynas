@@ -4,25 +4,26 @@ const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANO
 });
 
 /* ---------- Įkėlimas ---------- */
-const ORDER = {
+const ORDER = { targets: ["student_id", "group_id"], contacts: ["person_id"], 
   group_students: ["group_id", "student_id"], parent_children: ["parent_id", "student_id"],
   period_grades: ["group_id", "student_id", "period"], social_hours: ["social_id", "student_id"],
   message_recipients: ["message_id", "recipient_id"],
 };
+const OPTIONAL_TABLES = ["targets", "contacts", "events"]; // jei SQL dar nepaleistas, dienynas veikia be jų
 async function fetchAll(table) {
   const out = [];
   for (let from = 0; ; from += 1000) {
     let q = sb.from(table).select("*");
     (ORDER[table] || ["id"]).forEach(c => { q = q.order(c); });
     const { data, error } = await q.range(from, from + 999);
-    if (error) throw error;
+    if (error) { if (OPTIONAL_TABLES.includes(table)) return out; throw error; }
     out.push(...data);
     if (data.length < 1000) break;
   }
   return out;
 }
 const TABLES = ["settings","people","reg_keys","parent_children","classes","subjects","plans","groups","group_students","timetable",
-  "lessons","grades","attendance","notes","period_grades","works","prejust","subs","head_subs","social","social_hours","messages","message_recipients"];
+  "lessons","grades","attendance","notes","period_grades","works","prejust","subs","head_subs","social","social_hours","messages","message_recipients","targets","contacts","events"];
 
 async function loadSettingsPublic() {
   const { data } = await sb.from("settings").select("*").eq("id", 1).maybeSingle();
@@ -32,7 +33,7 @@ async function loadSettingsPublic() {
   if (r.error) authUi.dbError = r.error.message;
 }
 function mapSettings(s) {
-  return { school: s.school, yearStart: s.year_start, system: s.system, rounding: Number(s.rounding), periods: s.periods, holidays: s.holidays || [], bells: Array.isArray(s.bells) ? s.bells : DEFAULT_BELLS.slice(), demo: false };
+  return { school: s.school, yearStart: s.year_start, system: s.system, rounding: Number(s.rounding), periods: s.periods, holidays: s.holidays || [], bells: Array.isArray(s.bells) ? s.bells : DEFAULT_BELLS.slice(), attWarn: s.att_warn == null ? 10 : Number(s.att_warn), demo: false };
 }
 async function loadAll(guard) {
   const res = await Promise.all(TABLES.map(fetchAll));
@@ -55,10 +56,13 @@ async function loadAll(guard) {
 
   const u = {};
   D.people.forEach(p => { u[p.id] = { id: p.id, role: p.role, roles: Array.isArray(p.roles) ? p.roles : [], first: p.first_name, last: p.last_name, classId: p.class_id || "", email: p.email || "",
-    birth: p.birth || "", login: p.login || null, userId: p.user_id || null, mustChange: p.must_change, key: null, parentKeys: [], childIds: [] }; });
+    birth: p.birth || "", login: p.login || null, userId: p.user_id || null, mustChange: p.must_change, lastSeen: p.last_seen || "", key: null, parentKeys: [], childIds: [] }; });
   D.reg_keys.forEach(k => { const p = u[k.person_id]; if (!p) return; if (k.kind === "own") p.key = k.key; else p.parentKeys.push({ id: k.id, key: k.key, usedBy: k.used_by }); });
   D.parent_children.forEach(x => { if (u[x.parent_id]) u[x.parent_id].childIds.push(x.student_id); });
 
+  (D.targets || []).forEach(x => { c.targets[x.student_id + "|" + x.group_id] = Number(x.target); });
+  (D.contacts || []).forEach(x => { c.contacts[x.person_id] = { phone: x.phone || "", note: x.note || "" }; });
+  c.events = (D.events || []).map(x => ({ id: x.id, title: x.title, descr: x.descr || "", from: x.date_from, to: x.date_to, classId: x.class_id || "", by: x.created_by }));
   const g = {};
   const GG = id => (g[id] ??= { lessons: [], grades: [], att: [], pg: {}, notes: [] });
   D.lessons.forEach(x => GG(x.group_id).lessons.push({ id: x.id, d: lkey(x.date, x.slot), no: x.no, t: x.type, topic: x.topic, cw: x.classwork || "", hw: x.hw, hwDue: x.hw_due || "", hwAt: x.hw_at || "" }));
@@ -117,7 +121,7 @@ const R = {
   sub: s => ({ id: s.id, from_teacher: s.from, to_teacher: s.to, date_from: s.dFrom, date_to: s.dTo }),
   hsub: s => ({ id: s.id, class_id: s.classId, to_teacher: s.to, date_from: s.dFrom, date_to: s.dTo }),
   plan: p => ({ id: p.id, owner_id: p.ownerId, name: p.name, descr: p.desc || "", subject_id: p.subjectId || null, topics: p.topics }),
-  settings: s => ({ school: s.school, year_start: s.yearStart, system: s.system, rounding: s.rounding, periods: s.periods, holidays: s.holidays, bells: s.bells || DEFAULT_BELLS }),
+  settings: s => ({ school: s.school, year_start: s.yearStart, system: s.system, rounding: s.rounding, periods: s.periods, holidays: s.holidays, bells: s.bells || DEFAULT_BELLS, att_warn: s.attWarn == null ? 10 : s.attWarn }),
 };
 const DB = {
   ins: (t, rows) => W(sb.from(t).insert(rows)),

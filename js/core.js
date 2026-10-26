@@ -36,6 +36,10 @@ const PNAME={P1:"I pusmetis",P2:"II pusmetis",T1:"I trimestras",T2:"II trimestra
 const SOC_TYPES=["Pagalba žmonėms","Aplinkosauginė veikla","Kultūrinė veikla","Pilietinė veikla","Savanorystė mokykloje","Sportinė veikla"];
 const ROLE_NAME={admin:"Direktorius",deputy:"Direktoriaus pavaduotojas",teacher:"Mokytojas",student:"Mokinys",parent:"Tėvai"};
 const STAFF_ROLES=["admin","deputy","teacher"];
+/* Tema: auto / light / dark (išsaugoma šiame įrenginyje) */
+function themePref(){try{return localStorage.getItem("dienynas-theme")||"auto";}catch(e){return "auto";}}
+function applyTheme(t){const r=document.documentElement;if(t==="light"||t==="dark")r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");}
+applyTheme(themePref());
 const hasRole=(u,r)=>!!u&&(u.role===r||(u.roles||[]).includes(r));
 const rolesOf=u=>u?[u.role,...(u.roles||[]).filter(r=>r!==u.role)]:[];
 const roleNames=u=>{const rs=rolesOf(u);return STAFF_ROLES.filter(r=>rs.includes(r)).concat(rs.filter(r=>!STAFF_ROLES.includes(r))).map(r=>ROLE_NAME[r]).join(", ");};
@@ -46,7 +50,7 @@ function defaultPeriodDates(y){return{
   P1:{from:`${y}-09-01`,to:`${y+1}-01-31`,active:false},P2:{from:`${y+1}-02-01`,to:`${y+1}-06-30`,active:false},
   T1:{from:`${y}-09-01`,to:`${y}-11-30`,active:false},T2:{from:`${y}-12-01`,to:`${y+1}-03-31`,active:false},T3:{from:`${y+1}-04-01`,to:`${y+1}-06-30`,active:false}};}
 function emptyCore(){const y=2026;return{v:2,settings:{school:"Mokykla",system:"pusm",yearStart:y,rounding:0.5,periods:defaultPeriodDates(y),holidays:[],bells:DEFAULT_BELLS.slice(),demo:false},
-  classes:[],subjects:[],groups:[],timetable:[],works:[],prejust:[],subs:[],headSubs:[],plans:[]};}
+  classes:[],subjects:[],groups:[],timetable:[],works:[],prejust:[],subs:[],headSubs:[],plans:[],targets:{},contacts:{},events:[]};}
 
 /* ================= Būsena ================= */
 let core=emptyCore(), users={}, gd={}, social={list:[]}, msgs={list:[]};
@@ -137,6 +141,9 @@ function annual(g,sid){const pg=G(g.id).pg[sid]||{};const ps=periodsG(g);const v
 /* ---- Teisės ---- */
 /* Pavadavimai galioja tik nurodytu laikotarpiu */
 function activeSubsTo(uidT,d){d=d||TODAY();return core.subs.filter(s=>s.to===uidT&&d>=s.dFrom&&d<=s.dTo);}
+/* Kas vaduoja grupės mokytoją tą dieną (mokiniams ir tėvams rodoma prie pamokos) */
+function substituteFor(g,d){d=kDate(d);const s=g&&core.subs.find(s=>s.from===g.teacherId&&d>=s.dFrom&&d<=s.dTo);return s?s.to:null;}
+const subTag=(g,d)=>{const t=substituteFor(g,d);return t?`<span class="subst">Pavaduoja: ${esc(uNameFL(t))}</span>`:"";};
 function subsOverlapping(uidT,from,to){return core.subs.filter(s=>s.to===uidT&&s.dFrom<=to&&s.dTo>=from);}
 /* Ar mokytojas (ne savininkas) šią dieną vaduoja grupę */
 const isSubGroup=(g,u)=>!!u&&g.teacherId!==u.id;
@@ -147,6 +154,8 @@ function canEditDate(g,d){d=kDate(d);const u=me();if(!u||!hasRole(u,"teacher"))r
 function teacherGroups(tid,withSubs=true){const own=core.groups.filter(g=>g.teacherId===tid);if(!withSubs)return own;const subT=new Set(activeSubsTo(tid).map(s=>s.from));return [...own,...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==tid)];}
 function headClassesOf(tid){const d=TODAY();const own=core.classes.filter(c=>c.headTeacherId===tid);const sub=core.headSubs.filter(h=>h.to===tid&&d>=h.dFrom&&d<=h.dTo).map(h=>cls(h.classId)).filter(Boolean);return [...own,...sub.filter(c=>!own.includes(c))];}
 function studentGroups(sid){return core.groups.filter(g=>g.students.includes(sid));}
+/* Neformaliojo švietimo (būrelio) grupė: tik lankomumas, į vidurkius neįtraukiama */
+const isNF=g=>{const s=g&&subj(g.subjectId);return !!(s&&s.kind==="nf");};
 function viewedStudent(){const u=me();if(!u)return null;if(u.role==="student")return u.id;if(u.role==="parent"){const kids=(u.childIds||[]).filter(id=>U(id));if(!kids.includes(ui.child))ui.child=kids[0]||null;return ui.child;}return null;}
 
 

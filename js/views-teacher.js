@@ -12,7 +12,7 @@ function weekGrid(gids,opt={}){const{mon,slots,maxNo}=weekSlots(gids,opt.dateOk)
   for(let no=1;no<=maxNo;no++){h+=`<div class="no">${no}</div>`;for(let i=0;i<5;i++){const d=addDays(mon,i);const list=slots[no+"|"+d]||[];
     h+=`<div class="slot ${list.length?"":"empty"}">${list.map(x=>{const g=grp(x.gid);const l=G(x.gid).lessons.find(y=>y.d===x.d);const kd=l&&l.t?tStyle(l.t):"";const kdc=l&&["KD","TA","SD"].includes(l.t)?"kd":"";
       if(opt.sid){const gs=G(x.gid).grades.filter(y=>y.s===opt.sid&&y.d===x.d);const a=G(x.gid).att.find(y=>y.s===opt.sid&&y.d===x.d);
-        return `<button class="lsn ${kdc} ${kd?"typed":""}"${kd} data-act="stuLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(subjName(g.subjectId))}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}${l&&l.t?` <span class="tag bad">${l.t}</span>`:""}<div class="chips" style="margin-top:2px">${gs.map(y=>chip(y)).join("")}${a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}">${a.m==="pv"?"p":a.j||"n"}</span>`:""}</div>${l&&l.hw?`<span class="small">ND: ${esc(l.hw)}</span>`:""}</button>`;}
+        return `<button class="lsn ${kdc} ${kd?"typed":""}"${kd} data-act="stuLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(subjName(g.subjectId))}</b>${subTag(g,x.d)}${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}${l&&l.t?` <span class="tag bad">${l.t}</span>`:""}<div class="chips" style="margin-top:2px">${gs.map(y=>chip(y)).join("")}${a?`<span class="att ${a.j?"j":""} ${a.m==="pv"?"p":""}">${a.m==="pv"?"p":a.j||"n"}</span>`:""}</div>${l&&l.hw?`<span class="small">ND: ${esc(l.hw)}</span>`:""}</button>`;}
       const sub=u&&hasRole(u,"teacher")&&g.teacherId!==u.id;
       return opt.ro?`<div class="lsn"><b>${esc(g.name)}</b>${l&&l.topic?`<span>${esc(l.topic)}</span>`:""}</div>`:`<button class="lsn ${kdc} ${kd?"typed":""} ${sub?"sub":""}"${kd} data-act="openLesson" data-g="${x.gid}" data-d="${x.d}"><b>${esc(g.name)}</b>${sub?`<span class="small">vaduojate: ${esc(uNameFL(g.teacherId))}</span>`:""}${l&&l.topic?`<span>${esc(l.topic)}</span>`:'<span class="muted">tema neįvesta</span>'}</button>`;}).join("")}</div>`;}}
   return h+`</div></div>`;}
@@ -126,9 +126,10 @@ VIEWS.t_journal=u=>{
      <div><span class="muted small">Mokinių</span><b>${g.students.length}</b></div>
      ${ro?'<div><span class="tag">tik peržiūra</span></div>':`<div class="li-act"><button type="button" class="btn warn sm" data-act="delLesson" data-g="${g.id}" data-v="${dt}" ${cnt?`disabled title="Pirma ištrinkite šios pamokos įrašus (${cnt})"`:""}>Ištrinti pamoką</button></div>`}
    </div>`;
-  const tabs=`<div class="tabs ltabs" role="tablist">${LTABS.map(([k,n])=>`<button role="tab" aria-selected="${ui.ltab===k}" data-act="ltab" data-v="${k}">${n}${k==="ivert"&&nGr?` <span class="cnt">${nGr}</span>`:""}${k==="pastabos"&&nNt?` <span class="cnt">${nNt}</span>`:""}</button>`).join("")}</div>`;
+  const nf=isNF(g);const tabs=`<div class="tabs ltabs" role="tablist">${LTABS.map(([k,n])=>[k,nf&&k==="ivert"?"Lankomumas":n]).map(([k,n])=>`<button role="tab" aria-selected="${ui.ltab===k}" data-act="ltab" data-v="${k}">${n}${k==="ivert"&&nGr?` <span class="cnt">${nGr}</span>`:""}${k==="pastabos"&&nNt?` <span class="cnt">${nNt}</span>`:""}</button>`).join("")}</div>`;
   let body="";
   if(ui.ltab==="pamoka")body=lessonInfoForm(g,l,dt,ro);
+  else if(ui.ltab==="ivert"&&nf)body=`<div class="scroll" id="lsnRows">${lessonRows()}</div><p class="small muted" style="margin:10px 0 0">Neformaliojo švietimo užsiėmime žymimas tik lankomumas. n — nedalyvavo, p — pavėlavo.</p>`;
   else if(ui.ltab==="ivert")body=`<div class="settype">Nustatyti įvertinimų tipą visai grupei:<select class="inp" id="allType" ${ro?"disabled":""}>${TYPES.map(([k,n])=>`<option value="${k}" ${k===lessonDefType(l)?"selected":""}>${n}</option>`).join("")}</select><button type="button" class="btn sm" data-act="lgAllType" ${ro?"disabled":""}>Keisti</button></div>
    <div class="scroll" id="lsnRows">${lessonRows()}</div>
    <p class="small muted" style="margin:10px 0 0">Pažymiai ir lankomumas išsaugomi iškart paspaudus. Pažymį ar lankomumo žymą ištrinsite paspaudę šiukšliadėžę. n — nedalyvavo, p — pavėlavo.</p>`;
@@ -141,7 +142,7 @@ function lessonInfoForm(g,l,dt,ro){const plan=core.plans.find(x=>x.id===g.planId
    <fieldset class="ltype"><legend>Pamokos tipas</legend>
     ${[["","Įprasta pamoka"],...WORK_TYPES].map(([k,n])=>`<label class="ltype-opt ${k==="KD"?"kd":""}"><input type="radio" name="t" value="${k}" ${k===cur?"checked":""} ${dis}> ${n}</label>`).join("")}
     <div class="small muted" style="flex-basis:100%">Pažymėjus atsiskaitomąjį darbą, mokiniai jį matys skiltyje „Atsiskaitomieji darbai“, o įvertinimų tipas bus parinktas automatiškai.</div>
-   </fieldset>
+   </fieldset><div id="lessonWorks"></div>${cur?(setTimeout(()=>showDayWorks("#lessonWorks",dt,g.id),0),""):""}
    <label class="field">Tema<input name="topic" value="${esc(l.topic||"")}" list="planTopics" ${dis} placeholder="Pamokos tema"></label><datalist id="planTopics">${plan?plan.topics.map(t=>`<option value="${esc(t)}">`).join(""):""}</datalist>
    <label class="field">Klasės darbas<textarea name="cw" rows="3" ${dis} placeholder="Kas buvo atlikta pamokoje">${esc(l.cw||"")}</textarea></label>
    <label class="field">Namų darbai<textarea name="hw" rows="3" ${dis} placeholder="pvz., Vadovėlis p. 45, 3–7 užd.">${esc(l.hw||"")}</textarea></label>
@@ -169,14 +170,14 @@ function lessonRows(){const{gid,dt,ro}=ls;const g=grp(gid),d=G(gid);const l=d.le
      <td><select class="inp" data-ch="rowType" data-s="${sid}" ${dis} style="min-width:160px">${TYPES.map(([k,n])=>`<option value="${k}" ${k===type?"selected":""}>${n}</option>`).join("")}</select></td>
      <td class="am"><div class="gpick"><button type="button" class="gv" data-act="la" data-s="${sid}" data-v="n" aria-pressed="${!!a&&a.m==="n"}" title="Nedalyvavo" ${dis}>n</button><button type="button" class="gv" data-act="la" data-s="${sid}" data-v="pv" aria-pressed="${!!a&&a.m==="pv"}" title="Pavėlavo" ${dis}>p</button>
        <span class="trash-slot">${a&&!ro?`<button type="button" class="trash" data-act="laDel" data-s="${sid}" title="Ištrinti lankomumo žymą" aria-label="Ištrinti lankomumo žymą">${TRASH_SVG}</button>`:""}</span></div></td></tr>`;}).join("");
-  return `<table class="lsn-t"><thead><tr><th class="num">Nr.</th><th>Mokinys</th><th>Pažymys</th><th>Pasirinkite pažymį</th><th>Tipas</th><th>Lankomumas</th></tr></thead><tbody>${rows||`<tr><td colspan="6" class="muted">Grupėje nėra mokinių</td></tr>`}</tbody></table>`;}
+  return `<table class="lsn-t${isNF(g)?" nf":""}"><thead><tr><th class="num">Nr.</th><th>Mokinys</th><th>Pažymys</th><th>Pasirinkite pažymį</th><th>Tipas</th><th>Lankomumas</th></tr></thead><tbody>${rows||`<tr><td colspan="6" class="muted">Grupėje nėra mokinių</td></tr>`}</tbody></table>`;}
 function refreshLessonRows(){const box=$("#lsnRows");if(box)box.innerHTML=lessonRows();}
 async function ensureLessonSaved(gid,dt){const d=G(gid);if(!d.lessons.find(l=>l.d===dt)){ensureLesson(d,dt,gid);await DB.lesson(gid,d.lessons.find(l=>l.d===dt));}}
 
 /* ---- Laikotarpiai ---- */
 function canEditGroup(g){const u=me();if(!u||!hasRole(u,"teacher"))return false;if(g.teacherId===u.id)return true;const t=TODAY();return core.subs.some(s=>s.from===g.teacherId&&s.to===u.id&&t>=s.dFrom&&t<=s.dTo);}
 VIEWS.t_periods=u=>{
-  const gs=teacherGroups(u.id);const gOpts=gs.map(g=>[g.id,gLabel(g)]);ensureIn("gid",gOpts);const g=grp(ui.gid);if(!g)return `<h1>Trimestrai / pusmečiai</h1><div class="sheet empty">Grupių nėra.</div>`;
+  const gs=teacherGroups(u.id).filter(g=>!isNF(g));const gOpts=gs.map(g=>[g.id,gLabel(g)]);ensureIn("gid",gOpts);const g=grp(ui.gid);if(!g)return `<h1>Trimestrai / pusmečiai</h1><div class="sheet empty">Grupių nėra.</div>`;
   const sys=sysOfGroup(g);const pOpts=[...periodOpts(sys),["Y","Metinis įvertinimas"]];ensureIn("lpid",pOpts,curPeriod(sys));const pid=ui.lpid;const d=G(g.id);const sids=[...g.students].sort(byName);const isk=(g.evalSys||"10")==="isk";const can=canEditGroup(g);
   const bar=`<div class="bar">${sel("gid",gOpts,ui.gid,"Grupė")}${sel("lpid",pOpts,pid,"Laikotarpis")}`;
   const btns=(sid,key,sug,cur,dis,system)=>{const opts=system==="isk"?["isk","neisk"]:[1,2,3,4,5,6,7,8,9,10];return `<div class="pg">${sug!=null?`<button class="sug" data-act="setPg" data-s="${sid}" data-k="${key}" data-v="${sug}" aria-pressed="${cur===sug}" ${dis} title="Siūlomas">${VLABEL[sug]??sug}</button>`:""}${opts.filter(v=>v!==sug).map(v=>`<button data-act="setPg" data-s="${sid}" data-k="${key}" data-v="${v}" aria-pressed="${cur===v}" ${dis}>${VLABEL[v]??v}</button>`).join("")}<button data-act="setPg" data-s="${sid}" data-k="${key}" data-v="neat" aria-pressed="${cur==="neat"}" ${dis} style="padding:0 8px">neat.</button></div>`;};
@@ -237,15 +238,25 @@ function planDlg(id){const p=id?core.plans.find(x=>x.id===id):{name:"",desc:"",s
   <div class="dlg-f"><button type="button" class="btn" data-act="close">Atšaukti</button><button class="btn pri">Išsaugoti</button></div></form>`);}
 
 /* ---- Atsiskaitomieji darbai ---- */
+/* Visi tą dieną įrašyti atsiskaitomieji darbai; paryškinami tie, kuriuose dalyvauja tos pačios grupės mokiniai */
+async function showDayWorks(sel,d,gid){const box=$(sel);if(!box||!d)return;d=kDate(d);box.innerHTML='<div class="small muted">Tikrinami tos dienos atsiskaitymai…</div>';
+  const {data,error}=await sb.rpc("day_works",{p_date:d});if(!$(sel))return;
+  let list=error?null:data||[];if(!list){box.innerHTML="";return;}
+  const mine=new Set((grp(gid)||{students:[]}).students);
+  const rows=list.map(x=>{const g=grp(x.g);if(!g)return null;const cls=[...new Set(g.students.map(s=>clsName((U(s)||{}).classId)).filter(Boolean))].sort(lsort);const n=g.students.filter(s=>mine.has(s)).length;return{g,t:x.t,topic:x.topic,cls,n,own:g.id===gid};}).filter(Boolean)
+    .sort((a,b)=>(b.n>0)-(a.n>0)||lsort(a.cls.join(),b.cls.join()));
+  const other=rows.filter(r=>!r.own);const clash=other.filter(r=>r.n>0);
+  box.innerHTML=`<div class="dayworks"><div class="dw-h"><b>${d} (${WDL[wdOf(d)]}) įrašyti atsiskaitomieji darbai</b>${clash.length?`<span class="tag bad">Sutampa su jūsų grupe: ${clash.length}</span>`:'<span class="tag ok">Jūsų grupės mokiniai kitų atsiskaitymų neturi</span>'}</div>
+   ${rows.length?`<table><thead><tr><th>Klasės</th><th>Grupė</th><th>Mokytojas</th><th>Tipas</th><th>Tema</th><th class="num">Bendrų mokinių</th></tr></thead><tbody>${rows.map(r=>`<tr class="${r.n&&!r.own?"dw-clash":""}"><td>${esc(r.cls.join(", "))}</td><td>${esc(r.g.name)}${r.own?' <span class="tag i">jūsų</span>':""}</td><td>${esc(uNameFL(r.g.teacherId))}</td><td class="${r.t==="KD"?"kdtxt":""}">${esc(TYPE_NAME[r.t]||r.t)}</td><td>${esc(r.topic)}</td><td class="num">${r.own?"—":r.n||""}</td></tr>`).join("")}</tbody></table>`:'<p class="small muted" style="margin:6px 0 0">Tą dieną mokykloje atsiskaitomųjų darbų dar nėra.</p>'}</div>`;}
 function conflicts(gid,d,exceptId){const g=grp(gid);if(!g)return[];const set=new Set(g.students);const res=[];
   core.works.forEach(w=>{if(w.id===exceptId||w.d!==d||w.g===gid)return;const o=grp(w.g);if(o&&o.students.some(s=>set.has(s)))res.push({name:`${o.name} (${TYPE_NAME[w.t]})`,n:o.students.filter(s=>set.has(s)).length});});
   core.groups.forEach(o=>{if(o.id===gid)return;const l=G(o.id).lessons.find(x=>x.d===d&&x.t);if(l&&o.students.some(s=>set.has(s))&&!core.works.find(w=>w.g===o.id&&w.d===d))res.push({name:`${o.name} (${TYPE_NAME[l.t]})`,n:o.students.filter(s=>set.has(s)).length});});return res;}
-VIEWS.t_works=u=>{const own=teacherGroups(u.id);const gOpts=own.map(g=>[g.id,g.name]);ensureIn("gid",gOpts);
+VIEWS.t_works=u=>{const own=teacherGroups(u.id).filter(g=>!isNF(g));const gOpts=own.map(g=>[g.id,g.name]);ensureIn("gid",gOpts);
   const list=core.works.filter(w=>own.some(g=>g.id===w.g)).sort((a,b)=>lsort(a.d,b.d));
-  return `<h1>Atsiskaitomieji darbai</h1><p class="lead">Įveskite atsiskaitymo datą ir grupę, paspauskite „Peržiūrėti“ — pamatysite, ar tą dieną tie patys mokiniai neturi kito atsiskaitymo. Išsaugojus pamoka pažymima atsiskaitomojo darbo tipu, o mokiniai ir tėvai mato jį iš anksto.</p>
+  return `<h1>Atsiskaitomieji darbai</h1><p class="lead">Pasirinkite datą — iškart pamatysite visus tą dieną mokykloje įrašytus atsiskaitomuosius darbus; raudonai pažymėti tie, kuriuose dalyvauja ir jūsų grupės mokiniai. Išsaugojus pamoka pažymima atsiskaitomojo darbo tipu, o mokiniai ir tėvai mato jį iš anksto.</p>
   ${own.length?`<div class="sheet pad"><div class="bar" style="margin:0"><label class="field">Data<input type="date" id="wDate" value="${TODAY()}"></label>${sel("gid",gOpts,ui.gid,"Grupė")}
   <label class="field">Tipas<select id="wType">${WORK_TYPES.map(([k,n])=>`<option value="${k}">${n}</option>`).join("")}</select></label><label class="field" style="flex:1">Tema<input id="wTopic"></label>
-  <button class="btn" data-act="checkWork">Peržiūrėti</button><button class="btn pri" data-act="saveWork">Išsaugoti</button></div><div id="workCheck"></div></div>`:'<div class="sheet empty">Grupių nėra.</div>'}
+  <button class="btn pri" data-act="saveWork">Išsaugoti</button></div><div id="workCheck"></div><div id="dayWorks"></div></div>${(setTimeout(()=>showDayWorks("#dayWorks",($("#wDate")||{}).value,ui.gid),0),"")}`:'<div class="sheet empty">Grupių nėra.</div>'}
   <h2>Suplanuoti darbai</h2><div class="sheet scroll">${list.length?`<table><thead><tr><th>Data</th><th>Grupė</th><th>Tipas</th><th>Tema</th><th>Kiti atsiskaitymai</th><th></th></tr></thead><tbody>${list.map(w=>{const c=conflicts(w.g,w.d,w.id);return `<tr><td>${w.d}</td><td>${esc(grp(w.g).name)}</td><td>${esc(TYPE_NAME[w.t])}</td><td>${esc(w.topic)}</td><td>${c.length?`<span style="color:var(--amber)" title="${esc(c.map(x=>x.name).join(", "))}">Sutampa: ${c.length}</span>`:'<span class="muted">—</span>'}</td><td><button class="x" data-act="delWork" data-v="${w.id}" aria-label="Ištrinti">×</button></td></tr>`;}).join("")}</tbody></table>`:`<div class="empty">Suplanuotų darbų nėra.</div>`}</div>`;};
 
 /* ---- Socialinė-pilietinė veikla ---- */
@@ -277,16 +288,33 @@ VIEWS.t_subs=u=>{const to=core.subs.filter(s=>s.to===u.id),from=core.subs.filter
 /* ================= KLASĖS VADOVAS ================= */
 function headClassSel(u){const hc=headClassesOf(u.id).sort((a,b)=>lsort(a.name,b.name));const o=hc.map(c=>[c.id,c.name]);ensureIn("cls",o);return sel("cls",o,ui.cls,"Klasė");}
 function allAttN(sid){const out=[];studentGroups(sid).forEach(g=>G(g.id).att.forEach(a=>{if(a.s===sid&&a.m==="n")out.push({...a,g:g.id});}));return out;}
+/* Mokiniai, per 7 dienas praleidę >= ribos nepateisintų pamokų */
+function attWarnings(cids){const lim=core.settings.attWarn||10;const from=addDays(TODAY(),-6);const out=[];
+  cids.forEach(cid=>classStudents(cid).forEach(s=>{const n=allAttN(s.id).filter(a=>!a.j&&kDate(a.d)>=from&&kDate(a.d)<=TODAY()).length;if(n>=lim)out.push({s,n,cid});}));return out.sort((a,b)=>b.n-a.n);}
+const headWarnCount=u=>attWarnings(headClassesOf(u.id).map(c=>c.id)).length;
+/* ---- Kontaktų lapas (klasės vadovui, direktoriui, pavaduotojui) ---- */
+function contactSheet(cid){const ss=classStudents(cid);const ph=id=>(core.contacts[id]||{}).phone||"";const em=id=>(U(id)||{}).email||"";
+  const rows=ss.map((s,i)=>{const par=Object.values(users).filter(p=>p.role==="parent"&&(p.childIds||[]).includes(s.id));
+    return `<tr><td class="num">${i+1}</td><td><b>${esc(s.last)} ${esc(s.first)}</b>${ph(s.id)||em(s.id)?`<div class="small">${[ph(s.id)&&`<a href="tel:${esc(ph(s.id))}">${esc(ph(s.id))}</a>`,em(s.id)&&`<a href="mailto:${esc(em(s.id))}">${esc(em(s.id))}</a>`].filter(Boolean).join(" · ")}</div>`:""}</td>
+     <td>${par.length?par.map(p=>`<div class="ct-p"><b>${esc(p.first)} ${esc(p.last)}</b><span>${ph(p.id)?`<a href="tel:${esc(ph(p.id))}">${esc(ph(p.id))}</a>`:'<span class="muted">tel. nenurodytas</span>'}${em(p.id)?` · <a href="mailto:${esc(em(p.id))}">${esc(em(p.id))}</a>`:""}</span></div>`).join(""):'<span class="muted">Tėvai neužsiregistravę</span>'}</td></tr>`;}).join("");
+  return `<div class="sheet scroll">${rows?`<table class="ct-t"><thead><tr><th class="num">Nr.</th><th>Mokinys</th><th>Tėvai (globėjai)</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">Klasėje mokinių nėra.</div>'}</div>
+  <p class="small muted">Telefonus ir el. paštus tėvai bei mokiniai įrašo skiltyje „Mano paskyra“. Kontaktus mato tik klasės vadovas, direktorius ir jo pavaduotojai.</p>`;}
+VIEWS.h_contacts=u=>{const cs=headClassSel(u);if(!ui.cls)return "<h1>Kontaktai</h1>";return `<h1>Klasės kontaktai</h1><div class="bar">${cs}<button class="btn" data-act="print">Spausdinti</button></div>${contactSheet(ui.cls)}`;};
+VIEWS.a_contacts=()=>{const o=[...core.classes].sort((a,b)=>(a.level-b.level)||lsort(a.name,b.name)).map(c=>[c.id,c.name]);ensureIn("repCls",o.length?o:[["",""]]);if(!o.length)return `<h1>Kontaktai</h1><div class="sheet empty">Klasių nėra.</div>`;
+  return `<h1>Mokinių ir tėvų kontaktai</h1><div class="bar">${sel("repCls",o,ui.repCls,"Klasė")}<button class="btn" data-act="print">Spausdinti</button></div>${contactSheet(ui.repCls)}`;};
+VIEWS.h_late=u=>{const cs=headClassSel(u);if(!ui.cls)return "<h1>Vėlavimų suvestinė</h1>";const sys=sysOfClass(ui.cls);const pOpts=periodOpts(sys,true);ensureIn("repPid",pOpts,curPeriod(sys));
+  return `<h1>Vėlavimų suvestinė</h1><div class="bar">${cs}${sel("repPid",pOpts,ui.repPid,"Laikotarpis")}<button class="btn" data-act="print">Spausdinti</button></div>${reportLate(ui.cls,ui.repPid).html}`;};
 VIEWS.h_just=u=>{const cs=headClassSel(u);if(!ui.cls)return "<h1>N pateisinimas</h1>";const ss=classStudents(ui.cls);const so=ss.map(s=>[s.id,`${s.last} ${s.first}`]);ensureIn("sid",so);
   const y=core.settings.yearStart;const months=[];for(let i=0;i<10;i++){const m=(8+i)%12;months.push(`${m<8?y+1:y}-${String(m+1).padStart(2,"0")}`);}
   if(!months.includes(ui.month)){const t=TODAY().slice(0,7);ui.month=months.includes(t)?t:months[0];}
-  const att=ui.sid?allAttN(ui.sid):[];const tot=att.length,just=att.filter(a=>a.j).length;
+  const att=ui.sid?allAttN(ui.sid):[];const tot=att.length,just=att.filter(a=>a.j).length;const warns=attWarnings([ui.cls]);
   const[yy,mm]=ui.month.split("-").map(Number);const first=`${ui.month}-01`;const days=new Date(Date.UTC(yy,mm,0)).getUTCDate();const off=wdOf(first);
   let cells=WD.map(w=>`<div class="h">${w}</div>`).join("")+"<div></div>".repeat(off);
   for(let dd=1;dd<=days;dd++){const d=`${ui.month}-${String(dd).padStart(2,"0")}`;const da=att.filter(a=>kDate(a.d)===d);const un=da.filter(a=>!a.j).length;const pre=ui.sid&&preJust(ui.sid,d);const codes=[...new Set(da.filter(a=>a.j).map(a=>a.j))];const wk=wdOf(d)>=5||isHoliday(d);
     cells+=da.length?`<button class="day ${un?"bad":"okj"}" data-act="dayJust" data-v="${d}"><span>${dd}</span><b>${un?`${da.length} !`:`${da.length} ${codes.length>1?"n*":codes[0]}`}</b></button>`:`<div class="day ${wk?"off":""}"><span>${dd}</span><b class="muted">${pre?"–":""}</b></div>`;}
   const summary=ss.map(s=>{const a=allAttN(s.id);const un=a.filter(x=>!x.j).length;return `<tr><td><a href="#" data-act="pickSid" data-v="${s.id}">${esc(s.last)} ${esc(s.first)}</a></td><td class="num">${a.length}</td><td class="num">${a.length-un}</td><td class="num" style="${un?"color:var(--pen);font-weight:700":""}">${un}</td></tr>`;}).join("");
   return `<h1>N pateisinimas</h1><p class="lead">Raudoni langeliai su šauktuku — nepateisintos pamokos, pateisintos rodo priežasties sutrumpinimą, brūkšnys — iš anksto pateisinta diena. Skaičius rodo, kiek tą dieną praleista pamokų.</p>
+  ${warns.length?`<div class="note bad" style="margin-bottom:12px"><b>Dėmesio:</b> per paskutines 7 dienas ${core.settings.attWarn||10} ar daugiau nepateisintų pamokų praleido: ${warns.map(w=>`<a href="#" data-act="pickSid" data-v="${w.s.id}">${esc(w.s.last)} ${esc(w.s.first)}</a> (${w.n})`).join(", ")}.</div>`:""}
   <div class="bar">${cs}${sel("sid",so,ui.sid,"Mokinys")}${sel("month",months.map(m=>[m,`${m.slice(0,4)} ${MONTHS[+m.slice(5)-1]}`]),ui.month,"Mėnuo")}<button class="btn go" data-act="groupJust">Pateisinti mokinių grupei / iš anksto</button></div>
   <div class="stats"><div><b>${tot}</b>praleista pamokų</div><div><b>${just}</b>pateisinta</div><div><b class="${tot-just?"bad":""}">${tot-just}</b>nepateisinta</div></div>
   <div class="cal">${cells}</div>

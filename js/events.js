@@ -1,14 +1,20 @@
 /* Dienynas — naudotojo veiksmų apdorojimas (paspaudimai, formos) */
 $("#dlg").addEventListener("close",()=>{dialogOpen=false;if(pendingRender)render();});
 $("#dlg").addEventListener("click",e=>{if(e.target.id==="dlg")closeDlg();});
-const UIKEYS=["repStuCls","repStu","lesson","gid","pid","lpid","cls","sid","month","stPid","tab","repCls","repPid","ttTeacher","evalCls","child","dSubj"];
+const UIKEYS=["progStu","progMode","repStuCls","repStu","lesson","gid","pid","lpid","cls","sid","month","stPid","tab","repCls","repPid","ttTeacher","evalCls","child","dSubj"];
 
 document.addEventListener("change",e=>{
   if(e.target.dataset&&e.target.dataset.grp){const g=e.target;$$(`input[name=to][data-role="${g.dataset.grp}"]`).forEach(c=>{if(!c.closest(".ritem").hidden)c.checked=g.checked;});msgCountUpd();return;}
   if(e.target.name==="to"&&e.target.closest('form[data-form="sendMsg"]')){msgCountUpd();return;}
   if(e.target.name==="st"&&e.target.closest("#socStudents")){socSummary();return;}
+  if(e.target.id==="wDate"){showDayWorks("#dayWorks",e.target.value,ui.gid);$("#workCheck").innerHTML="";return;}
+  if(e.target.name==="t"&&e.target.closest('form[data-form="saveLesson"]')){const f=e.target.closest("form");if(e.target.value)showDayWorks("#lessonWorks",f.dataset.d,f.dataset.g);else $("#lessonWorks").innerHTML="";}
   const el=e.target.closest("[data-ch]");if(!el)return;const k=el.dataset.ch,v=el.value;
   if(UIKEYS.includes(k)){if(lessonDirty&&ui.view==="t_journal"&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?")){render();return;}lessonDirty=false;ui[k]=v;if(k==="gid"&&ui.view==="t_periods")ui.tab=null;render();return;}
+  if(k==="target"){const sid=viewedStudent();const gid=el.dataset.g;const key=sid+"|"+gid;const t=parseFloat(String(v).replace(",","."));
+    if(v===""||isNaN(t)){delete core.targets[key];setTimeout(render,0);DB.del("targets",{student_id:sid,group_id:gid});return;}
+    if(t<1||t>10){toast("Tikslas turi būti nuo 1 iki 10");return;}core.targets[key]=Math.round(t*100)/100;setTimeout(render,0);DB.up("targets",{student_id:sid,group_id:gid,target:core.targets[key]},"student_id,group_id");return;}
+  if(k==="theme"){try{localStorage.setItem("dienynas-theme",v);}catch(e){}applyTheme(v);toast("Tema pakeista");return;}
   if(k==="socCls"){$$("#socStudents .soc-cls").forEach(b=>b.hidden=b.dataset.c!==v);return;}
   if(k==="week"){if(v)ui.week=v;render();return;}
   if(k==="rowType"){const{gid,dt}=ls;const sid=el.dataset.s;ls.types[sid]=v;const ids=[];G(gid).grades.forEach(x=>{if(x.s===sid&&x.d===dt&&x.t!==v){x.t=v;ids.push(x.id);}});
@@ -21,6 +27,8 @@ document.addEventListener("click",async e=>{
   const el=e.target.closest("[data-act]");if(!el)return;const a=el.dataset.act,v=el.dataset.v;if(el.tagName==="A")e.preventDefault();const u=me();
   switch(a){
   case"nyArchive":{try{toast("Kuriamas archyvas…");await loadXlsx();const wb=buildArchive();const y=core.settings.yearStart;XLSX.writeFile(wb,`dienynas-archyvas-${y}-${y+1}.xlsx`);ui.nyArch=true;render();toast("Archyvas atsisiųstas");}catch(e){toast("Nepavyko sukurti archyvo: "+e.message);}break;}
+  case"calM":if(v){ui.calM=v;render();}break;
+  case"delEvent":if(!confirm("Ištrinti renginį?"))return;core.events=core.events.filter(x=>x.id!==v);render();await DB.del("events",{id:v});break;
   case"menuOpen":$(".app").classList.add("menu-open");break;
   case"menuClose":$(".app").classList.remove("menu-open");break;
   case"view":if(lessonDirty&&ui.view==="t_journal"&&v!=="t_journal"&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?"))return;lessonDirty=false;ui.view=v;ui.tab=null;render();window.scrollTo(0,0);break;
@@ -54,7 +62,7 @@ document.addEventListener("click",async e=>{
   case"tab":ui.tab=v;render();break;
   case"print":window.print();break;
   case"exportKeys":{const who=ui.tab||"emp";const rows=[["Asmuo","Klasė / pareigos","Raktas"]];if(who==="emp")teachers().forEach(t=>rows.push([`${t.last} ${t.first}`,"Mokytojas",t.login?"":t.key]));else students().forEach(s=>{if(who==="stu")rows.push([`${s.last} ${s.first}`,clsName(s.classId),s.login?"":s.key]);else(s.parentKeys||[]).filter(p=>!p.usedBy).forEach(p=>rows.push([`${s.last} ${s.first}`,clsName(s.classId),p.key]));});exportFile(`raktai-${who}.csv`,"\ufeff"+csv(rows),"text/csv");break;}
-  case"exportRep":{const r=ui.rep==="mr"?reportMR():ui.rep==="summary"?reportSummary(ui.repCls,ui.repPid):reportAtt(ui.repCls,ui.repPid);exportFile(`${ui.rep}-${ui.rep==="mr"?"metiniai":clsName(ui.repCls)}.csv`,"\ufeff"+csv(r.csv),"text/csv");break;}
+  case"exportRep":{const r=ui.rep==="load"?reportLoad():ui.rep==="mr"?reportMR():ui.rep==="summary"?reportSummary(ui.repCls,ui.repPid):ui.rep==="late"?reportLate(ui.repCls,ui.repPid):reportAtt(ui.repCls,ui.repPid);exportFile(`${ui.rep}-${ui.rep==="mr"?"metiniai":ui.rep==="load"?"kruvis":clsName(ui.repCls)}.csv`,"\ufeff"+csv(r.csv),"text/csv");break;}
   case"exportXml":exportFile(`metiniai-${core.settings.yearStart}.xml`,mrXml(),"application/xml");break;
   case"resetPw":{if(!confirm(`Nustatyti laikiną slaptažodį naudotojui ${uNameFL(v)}?`))return;const r=await DB.adminFn("reset_password",v);if(!r)return;users[v].mustChange=true;
     openDlg(dlgHead("Laikinas slaptažodis",esc(uNameFL(v)))+`<div class="dlg-b"><p>Perduokite naudotojui šiuos duomenis. Prisijungęs jis turės susikurti naują slaptažodį.</p><div class="formula">Prisijungimas: <b>${esc(users[v].login)}</b><br>Laikinas slaptažodis: <b class="mono">${esc(r.password)}</b></div></div><div class="dlg-f"><button class="btn pri" data-act="close">Gerai</button></div>`);break;}
@@ -137,7 +145,7 @@ document.addEventListener("click",async e=>{
 
   /* ---------- mokinys, tėvai ---------- */
   case"stuLesson":{const g=grp(el.dataset.g),d=el.dataset.d,L=G(g.id);const l=L.lessons.find(x=>x.d===d)||{};const sid=viewedStudent();const gs=L.grades.filter(x=>x.s===sid&&x.d===d);const at=L.att.find(x=>x.s===sid&&x.d===d);const nt=L.notes.filter(x=>x.s===sid&&x.d===d);
-    openDlg(dlgHead(esc(subjName(g.subjectId)),`${kDate(d)}${l.no?`, ${l.no} pam.`:""} · ${esc(uNameFL(g.teacherId))}`)+`<div class="dlg-b"><div><div class="small muted">Tema</div>${esc(l.topic||"—")}${l.t?` <span class="tag bad">${esc(TYPE_NAME[l.t])}</span>`:""}</div>${l.cw?`<div><div class="small muted">Klasės darbas</div>${esc(l.cw)}</div>`:""}<div><div class="small muted">Namų darbai</div>${esc(l.hw||"—")}${l.hw&&l.hwDue?` <span class="tag">atlikti iki ${l.hwDue}</span>`:""}</div>
+    openDlg(dlgHead(esc(subjName(g.subjectId)),`${kDate(d)}${l.no?`, ${l.no} pam.`:""} · ${esc(uNameFL(g.teacherId))}`)+`<div class="dlg-b">${subTag(g,d)}<div><div class="small muted">Tema</div>${esc(l.topic||"—")}${l.t?` <span class="tag bad">${esc(TYPE_NAME[l.t])}</span>`:""}</div>${l.cw?`<div><div class="small muted">Klasės darbas</div>${esc(l.cw)}</div>`:""}<div><div class="small muted">Namų darbai</div>${esc(l.hw||"—")}${l.hw&&l.hwDue?` <span class="tag">atlikti iki ${l.hwDue}</span>`:""}</div>
     <div><div class="small muted">Įvertinimai</div>${gs.map(x=>`<div>${chip(x,false)} ${esc(TYPE_NAME[x.t])}${x.c?` — ${esc(x.c)}`:""}</div>`).join("")||"—"}</div><div><div class="small muted">Lankomumas</div>${at?(at.m==="pv"?"Pavėlavo":at.j?`Nedalyvavo (${esc(JUST_NAME[at.j])})`:"Nedalyvavo, nepateisinta"):"Dalyvavo"}</div>
     ${nt.map(n=>`<div>${NOTE_ICON[n.kind]||""} ${NOTE_NAME[n.kind]||""}: ${esc(n.text)}</div>`).join("")}</div><div class="dlg-f"><button class="btn" data-act="close">Uždaryti</button></div>`);break;}
 
@@ -217,6 +225,10 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
     if(!r){busy(false);return;}
     const uids=(r&&r.user_ids)||[];if(uids.length)await DB.adminFn("delete_users",null,{userIds:uids});
     ui.nyArch=false;ui.gid=null;ui.lesson=null;_hol=null;await loadAll();busy(false);ui.view="a_home";render();toast(`Sveikiname su ${y}–${y+1} mokslo metais!`);break;}
+  case"savePhone":{const ph=S("phone");core.contacts[u.id]={...(core.contacts[u.id]||{note:""}),phone:ph};if(await DB.up("contacts",{person_id:u.id,phone:ph},"person_id"))toast("Telefonas išsaugotas");break;}
+  case"addEvent":{const fr=S("from"),to=S("to");if(!S("title")||!fr||!to||to<fr){toast("Patikrinkite pavadinimą ir datas");return;}const x={id:uid(),title:S("title"),descr:S("descr"),from:fr,to,classId:S("classId"),by:u.id};core.events.push(x);ui.calM=fr.slice(0,7);render();
+    if(await DB.ins("events",{id:x.id,title:x.title,descr:x.descr,date_from:fr,date_to:to,class_id:x.classId||null,created_by:u.id}))toast("Renginys pridėtas");break;}
+  case"saveAttWarn":{core.settings.attWarn=Math.max(1,+S("attWarn")||10);render();if(await DB.settings())toast("Išsaugota");break;}
   case"saveSettings":{const s=core.settings;const y=+S("yearStart");s.school=S("school")||s.school;s.system=S("system");s.rounding=+S("rounding");
     if(y!==s.yearStart){const act=Object.fromEntries(Object.entries(s.periods).map(([kk,p])=>[kk,p.active]));s.yearStart=y;s.periods=defaultPeriodDates(y);Object.keys(act).forEach(kk=>s.periods[kk].active=act[kk]);}
     else["P1","P2","T1","T2","T3"].forEach(id=>{s.periods[id].from=S("from_"+id)||s.periods[id].from;s.periods[id].to=S("to_"+id)||s.periods[id].to;});
