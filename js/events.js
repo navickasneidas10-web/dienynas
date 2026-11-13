@@ -10,6 +10,13 @@ document.addEventListener("change",e=>{
   if(e.target.id==="wDate"){showDayWorks("#dayWorks",e.target.value,ui.gid);$("#workCheck").innerHTML="";return;}
   const el=e.target.closest("[data-ch]");if(!el)return;const k=el.dataset.ch,v=el.value;
   if(UIKEYS.includes(k)){if(lessonDirty&&ui.view==="t_journal"&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?")){render();return;}lessonDirty=false;ui[k]=v;if(k==="gid"&&ui.view==="t_periods")ui.tab=null;render();return;}
+  if(k==="lvTxt"){const{gid,dt,ro}=ls;if(ro)return;const sid=el.dataset.s;const d=G(gid);const txt=String(v).trim();const gs=d.grades.filter(x=>x.s===sid&&x.d===dt&&x.v==="txt");const cur=gs[gs.length-1];
+    if(!d.lessons.find(l=>l.d===dt)){ensureLesson(d,dt,gid);DB.lesson(gid,d.lessons.find(l=>l.d===dt));}
+    const upd=()=>{const tr=el.closest("tr");const td=tr&&tr.querySelector(".gcol");if(!td)return;const all=d.grades.filter(x=>x.s===sid&&x.d===dt);const last=all[all.length-1];td.classList.toggle("typed",!!last);if(last)td.style.setProperty("--tc",tc(last.t));else td.style.removeProperty("--tc");const gv=td.querySelector(".gvs");if(gv)gv.innerHTML=all.map(x=>chip(x)).join(" ");};
+    if(!txt){if(cur){d.grades=d.grades.filter(x=>x.id!==cur.id);upd();DB.del("grades",{id:cur.id});}return;}
+    if(cur){if(cur.c===txt)return;cur.c=txt;DB.upd("grades",{comment:txt},{id:cur.id});}
+    else{const l=d.lessons.find(x=>x.d===dt);const x={id:uid(),s:sid,d:dt,t:ls.types[sid]||lessonDefType(l),v:"txt",c:txt,by:me().id,at:new Date().toISOString()};d.grades.push(x);DB.ins("grades",R.grade(gid,x));}
+    upd();return;}
   if(k==="target"){const sid=viewedStudent();const gid=el.dataset.g;const key=sid+"|"+gid;const t=parseFloat(String(v).replace(",","."));
     if(v===""||isNaN(t)){delete core.targets[key];setTimeout(render,0);DB.del("targets",{student_id:sid,group_id:gid});return;}
     if(t<1||t>10){toast("Tikslas turi būti nuo 1 iki 10");return;}core.targets[key]=Math.round(t*100)/100;setTimeout(render,0);DB.up("targets",{student_id:sid,group_id:gid,target:core.targets[key]},"student_id,group_id");return;}
@@ -101,7 +108,7 @@ document.addEventListener("click",async e=>{
   case"la":{const{gid,dt,ro}=ls;if(ro)return;const sid=el.dataset.s;const d=G(gid);const a=d.att.find(x=>x.s===sid&&x.d===dt);const m=a&&a.m===v?"":v;
     await ensureLessonSaved(gid,dt);setAtt(d,sid,dt,m);refreshLessonRows();const now=d.att.find(x=>x.s===sid&&x.d===dt);if(now)await DB.att(gid,now);else await DB.delAtt(gid,sid,dt);break;}
   case"cell":openCell(ui.gid,el.dataset.s,el.dataset.d);break;
-  case"roCell":toast("Šią pamoką galite tik peržiūrėti — ji nepatenka į jūsų pavadavimo laikotarpį");break;
+  case"roCell":{const g=grp(el.dataset.g||ui.gid);const d=el.dataset.d;if(g&&ownSubbed(g,d))toast(`Šią pamoką vaduoja ${uNameFL(substituteFor(g,d))} — galite tik matyti`);else toast("Šią pamoką galite tik peržiūrėti — ji nepatenka į jūsų pavadavimo laikotarpį");break;}
   case"pickV":$$("#pickV button").forEach(b=>b.setAttribute("aria-pressed",b===el&&dlgState.v!==v?"true":"false"));dlgState.v=dlgState.v===v?null:v;break;
   case"pickA":$$("#pickA button").forEach(b=>b.setAttribute("aria-pressed",b===el?"true":"false"));dlgState.a=v;break;
   case"saveCell":saveCell(el.dataset.g,el.dataset.s,el.dataset.d);break;
@@ -259,7 +266,7 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
   case"addNfTime":{const g=grp(f.dataset.g);if(!S("tFrom")||!S("tTo")||S("tTo")<=S("tFrom")){toast("Pabaiga turi būti vėliau už pradžią");return;}if(S("to")<S("from")){toast("Patikrinkite datas");return;}
     const t={id:uid(),g:g.id,wd:+S("wd"),no:0,from:S("from"),to:S("to"),tFrom:S("tFrom"),tTo:S("tTo"),weeks:null,parity:"all"};core.timetable.push(t);render();if(await DB.ins("timetable",R.tt(t)))toast("Laikas pridėtas");break;}
   case"saveGroup":{const students=fd.getAll("gs");const programs={};students.forEach(s=>{const p=S("gp_"+s);if(p)programs[s]=p;});
-    const obj={name:S("name"),subjectId:S("subjectId"),kind:S("kind"),level:S("level"),hours:+S("hours")||1,students,programs,planId:S("planId"),evalSys:S("evalSys")==="isk"?"isk":"10"};
+    const obj={name:S("name"),subjectId:S("subjectId"),kind:S("kind"),level:S("level"),hours:+S("hours")||1,students,programs,planId:S("planId"),evalSys:EVAL_SYS[S("evalSys")]?S("evalSys"):"10"};
     let g;if(v){g=grp(v);Object.assign(g,obj);}else{g={id:uid(),teacherId:u.id,extra:{},...obj};core.groups.push(g);ui.gid=g.id;}
     closeDlg();render();if(await DB.saveGroup(g,!v))toast("Grupė išsaugota");break;}
   case"savePlan":{const obj={name:S("name"),desc:S("desc"),subjectId:S("subjectId"),topics:S("topics").split(/\r?\n/).map(x=>x.trim()).filter(Boolean)};

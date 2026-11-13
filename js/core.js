@@ -44,7 +44,7 @@ const hasRole=(u,r)=>!!u&&(u.role===r||(u.roles||[]).includes(r));
 const rolesOf=u=>u?[u.role,...(u.roles||[]).filter(r=>r!==u.role)]:[];
 const roleNames=u=>{const rs=rolesOf(u);return STAFF_ROLES.filter(r=>rs.includes(r)).concat(rs.filter(r=>!STAFF_ROLES.includes(r))).map(r=>ROLE_NAME[r]).join(", ");};
 const isStaff=u=>STAFF_ROLES.some(r=>hasRole(u,r));
-const EVAL_SYS={"10":"Dešimtbalė sistema",isk:"Vertinimas įskaita"};
+const EVAL_SYS={"10":"Dešimtbalė sistema",isk:"Vertinimas įskaita","100":"Šimtabalė sistema",pr:"Pradinis ugdymas (žodžiu ir lygiais)"};
 
 function defaultPeriodDates(y){return{
   P1:{from:`${y}-09-01`,to:`${y+1}-01-31`,active:false},P2:{from:`${y+1}-02-01`,to:`${y+1}-06-30`,active:false},
@@ -123,21 +123,29 @@ function occDates(gid,from,to){from=kDate(from);to=kDate(to);const byDay=new Map
 /* ---- Vertinimas ---- */
 const numeric=gs=>gs.filter(g=>typeof g.v==="number");
 function avgOf(gs){const n=numeric(gs);if(!n.length)return null;return n.reduce((a,g)=>a+g.v,0)/n.length;}
-function roundBy(a,thr){if(a==null)return null;const f=Math.floor(a+1e-9);return Math.min(10,Math.max(1,(a-f)+1e-9>=thr?f+1:f));}
+function roundBy(a,thr,max=10){if(a==null)return null;const f=Math.floor(a+1e-9);return Math.min(max,Math.max(1,(a-f)+1e-9>=thr?f+1:f));}
 const fmtAvg=a=>a==null?"—":a.toFixed(2).replace(".",",");
-const VLABEL={neat:"neat.",isk:"įsk.",neisk:"neįsk.",atl:"atl.",pp:"pp.",np:"np."};
-const VTITLE={neat:"Neatsiskaitė",isk:"Įskaityta",neisk:"Neįskaityta",atl:"Atliko",pp:"Padarė pažangą",np:"Nepadarė pažangos"};
+const VLABEL={neat:"neat.",isk:"įsk.",neisk:"neįsk.",atl:"atl.",pp:"pp.",np:"np.",txt:"✎",nep:"nepat.",sle:"slenkst.",pag:"pagr.",auk:"aukšt."};
+const VTITLE={neat:"Neatsiskaitė",isk:"Įskaityta",neisk:"Neįskaityta",atl:"Atliko",pp:"Padarė pažangą",np:"Nepadarė pažangos",txt:"Vertinimas žodžiu",nep:"Nepatenkinamas lygis",sle:"Slenkstinis lygis",pag:"Pagrindinis lygis",auk:"Aukštesnysis lygis"};
+/* Pradinio ugdymo pasiekimų lygiai ir šimtabalė sistema */
+const LEVELS=["nep","sle","pag","auk"];
+const sysOf=g=>(g&&g.evalSys)||"10";
+const scaleMax=g=>sysOf(g)==="100"?100:10;
+/* Vidurkiams tarp skirtingų dalykų šimtabalis pažymys perskaičiuojamas į dešimtbalį */
+const n10=(g,v)=>typeof v==="number"?(sysOf(g)==="100"?v/10:v):v;
+const badV=(g,v)=>typeof v==="number"?v<(sysOf(g)==="100"?40:4):["neisk","np","neat","nep"].includes(v);
 const GRADE_VALUES=["1","2","3","4","5","6","7","8","9","10","isk","neisk","atl","pp","np","neat"];
 /* Pažymiai rodomi paprastu tekstu; raudonai — tik už kontrolinį darbą */
 function gClass(v,t){return t==="KD"?"kd":"";}
-function chip(g,title=true){const t=title&&g.d?` title="${esc(kDate(g.d))} · ${esc(TYPE_NAME[g.t]||g.t||"")}${g.c?" · "+esc(g.c):""}"`:"";return `<span class="g ${gClass(g.v,g.t)}"${t}>${VLABEL[g.v]??g.v}</span>`;}
+function chip(g,title=true){const t=(title&&g.d)||g.v==="txt"?` title="${g.d?esc(kDate(g.d))+" · ":""}${esc(TYPE_NAME[g.t]||g.t||"")}${g.c?" · "+esc(g.c):""}"`:"";return `<span class="g ${gClass(g.v,g.t)} ${g.v==="txt"?"txt":""}"${t}>${VLABEL[g.v]??g.v}</span>`;}
 const vchip=v=>v==null?'<span class="muted">—</span>':chip({v},false);
 function sGrades(gid,sid,pid){return G(gid).grades.filter(g=>g.s===sid&&inPeriod(g.d,pid)).sort((a,b)=>lsort(a.d,b.d));}
-function suggest(g,sid,pid){const gs=sGrades(g.id,sid,pid);if((g.evalSys||"10")==="isk"){const i=gs.filter(x=>x.v==="isk").length,n=gs.filter(x=>x.v==="neisk").length;return i+n?(i>=n?"isk":"neisk"):null;}return roundBy(avgOf(gs),core.settings.rounding);}
+function suggest(g,sid,pid){const gs=sGrades(g.id,sid,pid);if(sysOf(g)==="pr")return null;if(sysOf(g)==="100")return roundBy(avgOf(gs),core.settings.rounding,100);if((g.evalSys||"10")==="isk"){const i=gs.filter(x=>x.v==="isk").length,n=gs.filter(x=>x.v==="neisk").length;return i+n?(i>=n?"isk":"neisk"):null;}return roundBy(avgOf(gs),core.settings.rounding);}
 function annual(g,sid){const pg=G(g.id).pg[sid]||{};const ps=periodsG(g);const vals=ps.map(p=>pg[p.id]);
   if(vals.some(v=>v==null))return{avg:null,sug:null};
   if((g.evalSys||"10")==="isk")return{avg:null,sug:vals.every(v=>v==="isk")?"isk":"neisk"};
-  const n=vals.filter(v=>typeof v==="number");if(n.length<vals.length)return{avg:null,sug:null};const a=n.reduce((x,y)=>x+y,0)/n.length;return{avg:a,sug:roundBy(a,0.5)};}
+  if(sysOf(g)==="pr"){const lv=vals.filter(v=>LEVELS.includes(v));return{avg:null,sug:lv.length===vals.length?lv[lv.length-1]:null};}
+  const n=vals.filter(v=>typeof v==="number");if(n.length<vals.length)return{avg:null,sug:null};const a=n.reduce((x,y)=>x+y,0)/n.length;return{avg:a,sug:roundBy(a,0.5,scaleMax(g))};}
 
 /* ---- Teisės ---- */
 /* Pavadavimai galioja tik nurodytu laikotarpiu */
@@ -151,7 +159,9 @@ const isSubGroup=(g,u)=>!!u&&g.teacherId!==u.id;
 /* Pamokų pildymui: savos grupės + vykstančių ir būsimų pavadavimų grupės (rodomos tik pavadavimo dienos) */
 function journalGroups(tid){const t=TODAY();const subT=new Set(core.subs.filter(s=>s.to===tid&&s.dTo>=t).map(s=>s.from));
   return [...core.groups.filter(g=>g.teacherId===tid),...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==tid)];}
-function canEditDate(g,d){d=kDate(d);const u=me();if(!u||!hasRole(u,"teacher"))return false;if(g.teacherId===u.id)return true;return core.subs.some(s=>s.from===g.teacherId&&s.to===u.id&&d>=s.dFrom&&d<=s.dTo);}
+/* Savo pamokų, kurias tuo metu vaduoja kitas mokytojas, mokytojas keisti ir atidaryti negali — tik matyti */
+const ownSubbed=(g,d)=>{const u=me();return !!(u&&g&&g.teacherId===u.id&&substituteFor(g,d));};
+function canEditDate(g,d){d=kDate(d);const u=me();if(!u||!hasRole(u,"teacher"))return false;if(g.teacherId===u.id)return !substituteFor(g,d);return core.subs.some(s=>s.from===g.teacherId&&s.to===u.id&&d>=s.dFrom&&d<=s.dTo);}
 function teacherGroups(tid,withSubs=true){const own=core.groups.filter(g=>g.teacherId===tid);if(!withSubs)return own;const subT=new Set(activeSubsTo(tid).map(s=>s.from));return [...own,...core.groups.filter(g=>subT.has(g.teacherId)&&g.teacherId!==tid)];}
 function headClassesOf(tid){const d=TODAY();const own=core.classes.filter(c=>c.headTeacherId===tid);const sub=core.headSubs.filter(h=>h.to===tid&&d>=h.dFrom&&d<=h.dTo).map(h=>cls(h.classId)).filter(Boolean);return [...own,...sub.filter(c=>!own.includes(c))];}
 function studentGroups(sid){return core.groups.filter(g=>g.students.includes(sid));}
