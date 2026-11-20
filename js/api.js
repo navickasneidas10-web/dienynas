@@ -92,6 +92,14 @@ async function loadAll(guard) {
 /* Vykstantys įrašymai: kol jie nesibaigė, duomenų iš serverio iš naujo neįkeliame,
    kad ką tik įvesti įrašai neišnyktų ir vėl neatsirastų. */
 let pendingWrites = 0, writeSeq = 0, lastWrite = 0;
+/* Įrašai į tą patį įrašą (pvz., to paties mokinio tos pačios pamokos pažymį) siunčiami eilės tvarka,
+   kad greiti spustelėjimai nesusimaišytų; skirtingi įrašai siunčiami lygiagrečiai. */
+const writeChains = {};
+function queueWrite(key, fn) {
+  const p = (writeChains[key] || Promise.resolve()).then(fn, fn);
+  writeChains[key] = p.finally(() => { if (writeChains[key] === p) delete writeChains[key]; });
+  return p;
+}
 async function W(promise, quiet) {
   pendingWrites++; writeSeq++; lastWrite = Date.now();
   let res;

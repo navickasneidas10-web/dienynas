@@ -24,7 +24,7 @@ document.addEventListener("change",e=>{
   if(k==="socCls"){$$("#socStudents .soc-cls").forEach(b=>b.hidden=b.dataset.c!==v);return;}
   if(k==="week"){if(v)ui.week=v;render();return;}
   if(k==="rowType"){const{gid,dt}=ls;const sid=el.dataset.s;ls.types[sid]=v;const ids=[];G(gid).grades.forEach(x=>{if(x.s===sid&&x.d===dt&&x.t!==v){x.t=v;ids.push(x.id);}});
-    refreshLessonRows();if(ids.length)Promise.all(ids.map(id=>DB.upd("grades",{type:v},{id})));return;}
+    refreshLessonRow(sid);if(ids.length)ids.forEach(id=>queueWrite("g:"+gid+"|"+sid+"|"+dt,()=>DB.upd("grades",{type:v},{id})));return;}
   if(k==="evalSys"){const g=grp(el.dataset.g);g.evalSys=v;DB.upd("groups",{eval_sys:v},{id:g.id}).then(r=>r&&toast("Vertinimo sistema pakeista"));return;}
   if(k==="extraName"){const g=grp(el.dataset.g);g.extra??={};const t=v.trim();if(t)g.extra[el.dataset.p]=t;else delete g.extra[el.dataset.p];DB.upd("groups",{extra:g.extra},{id:g.id}).then(r=>r&&toast("Išsaugota"));return;}
 });
@@ -96,17 +96,18 @@ document.addEventListener("click",async e=>{
   case"lessonMove":{if(lessonDirty&&!confirm("Pamokos informacija neišsaugota. Tęsti neišsaugojus?"))return;const g=grp(ui.gid);const ds=journalDates(g,ui.pid);const i=ds.indexOf(ui.lesson)+ +v;if(ds[i]){lessonDirty=false;ui.lesson=ds[i];render();}break;}
   case"lv":{const{gid,dt,ro}=ls;if(ro)return;const sid=el.dataset.s;const d=G(gid);const gs=d.grades.filter(x=>x.s===sid&&x.d===dt);const cur=gs[gs.length-1];const val=parseV(v);
     const l=d.lessons.find(x=>x.d===dt);const type=ls.types[sid]||(cur&&cur.t)||lessonDefType(l);
-    if(cur&&String(cur.v)===v){d.grades=d.grades.filter(x=>x.id!==cur.id);refreshLessonRows();await DB.del("grades",{id:cur.id});break;}
-    await ensureLessonSaved(gid,dt);
-    if(cur){cur.v=val;cur.t=type;refreshLessonRows();await DB.upd("grades",{value:String(val),type},{id:cur.id});}
-    else{const x={id:uid(),s:sid,d:dt,t:type,v:val,c:"",by:u.id};d.grades.push(x);refreshLessonRows();await DB.ins("grades",R.grade(gid,x));}break;}
-  case"laDel":{const{gid,dt,ro}=ls;if(ro)return;const sid=el.dataset.s;setAtt(G(gid),sid,dt,"");refreshLessonRows();if(await DB.delAtt(gid,sid,dt))toast("Lankomumo žyma ištrinta");break;}
+    const key="g:"+gid+"|"+sid+"|"+dt;
+    if(cur&&String(cur.v)===v){d.grades=d.grades.filter(x=>x.id!==cur.id);refreshLessonRow(sid);queueWrite(key,()=>DB.del("grades",{id:cur.id}));break;}
+    ensureLessonSaved(gid,dt);
+    if(cur){cur.v=val;cur.t=type;refreshLessonRow(sid);const id=cur.id;queueWrite(key,()=>DB.upd("grades",{value:String(val),type},{id}));}
+    else{const x={id:uid(),s:sid,d:dt,t:type,v:val,c:"",by:u.id,at:new Date().toISOString()};d.grades.push(x);refreshLessonRow(sid);queueWrite(key,()=>DB.ins("grades",R.grade(gid,x)));}break;}
+  case"laDel":{const{gid,dt,ro}=ls;if(ro)return;const sid=el.dataset.s;setAtt(G(gid),sid,dt,"");refreshLessonRow(sid);queueWrite("a:"+gid+"|"+sid+"|"+dt,()=>DB.delAtt(gid,sid,dt));break;}
   case"delAttCell":{const gid=el.dataset.g,sid=el.dataset.s,dt=v;setAtt(G(gid),sid,dt,"");openCell(gid,sid,dt);pendingRender=true;if(await DB.delAtt(gid,sid,dt))toast("Lankomumo žyma ištrinta");break;}
-  case"lgDel":{const{gid}=ls;const d=G(gid);d.grades=d.grades.filter(x=>x.id!==v);refreshLessonRows();if(await DB.del("grades",{id:v}))toast("Pažymys ištrintas");break;}
+  case"lgDel":{const{gid,dt}=ls;const d=G(gid);const x=d.grades.find(y=>y.id===v);d.grades=d.grades.filter(y=>y.id!==v);if(x)refreshLessonRow(x.s);else refreshLessonRows();queueWrite(x?"g:"+gid+"|"+x.s+"|"+dt:"g:"+v,()=>DB.del("grades",{id:v}));break;}
   case"lgAllType":{const{gid,dt}=ls;const t=$("#allType").value;grp(gid).students.forEach(sid=>ls.types[sid]=t);const d=G(gid);let n=0;d.grades.forEach(x=>{if(x.d===dt&&x.t!==t){x.t=t;n++;}});
     refreshLessonRows();if(n)await DB.upd("grades",{type:t},{group_id:gid,date:kDate(dt),slot:kSlot(dt)});toast("Įvertinimų tipas nustatytas visai grupei");break;}
   case"la":{const{gid,dt,ro}=ls;if(ro)return;const sid=el.dataset.s;const d=G(gid);const a=d.att.find(x=>x.s===sid&&x.d===dt);const m=a&&a.m===v?"":v;
-    await ensureLessonSaved(gid,dt);setAtt(d,sid,dt,m);refreshLessonRows();const now=d.att.find(x=>x.s===sid&&x.d===dt);if(now)await DB.att(gid,now);else await DB.delAtt(gid,sid,dt);break;}
+    ensureLessonSaved(gid,dt);setAtt(d,sid,dt,m);refreshLessonRow(sid);const now=d.att.find(x=>x.s===sid&&x.d===dt);const snap=now?{...now}:null;queueWrite("a:"+gid+"|"+sid+"|"+dt,()=>snap?DB.att(gid,snap):DB.delAtt(gid,sid,dt));break;}
   case"cell":openCell(ui.gid,el.dataset.s,el.dataset.d);break;
   case"roCell":{const g=grp(el.dataset.g||ui.gid);const d=el.dataset.d;if(g&&ownSubbed(g,d))toast(`Šią pamoką vaduoja ${uNameFL(substituteFor(g,d))} — galite tik matyti`);else toast("Šią pamoką galite tik peržiūrėti — ji nepatenka į jūsų pavadavimo laikotarpį");break;}
   case"pickV":$$("#pickV button").forEach(b=>b.setAttribute("aria-pressed",b===el&&dlgState.v!==v?"true":"false"));dlgState.v=dlgState.v===v?null:v;break;
@@ -257,7 +258,7 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("form[data
     if(await DB.lesson(gid,l)){lessonDirty=false;render();toast("Pamoka įrašyta");}break;}
   case"saveNotes":{const gid=f.dataset.g,dt=f.dataset.d;const st=fd.getAll("st");const kind=S("kind")||"n";const text=S("text");
     if(!st.length){toast("Pasirinkite bent vieną mokinį");return;}if(!text){toast("Įrašykite tekstą");return;}
-    await ensureLessonSaved(gid,dt);const d=G(gid);const now=new Date().toISOString();const rows=st.map(sid=>({id:uid(),s:sid,d:dt,kind,text,by:u.id,at:now}));d.notes.push(...rows);render();
+    ensureLessonSaved(gid,dt);const d=G(gid);const now=new Date().toISOString();const rows=st.map(sid=>({id:uid(),s:sid,d:dt,kind,text,by:u.id,at:now}));d.notes.push(...rows);render();
     if(await DB.ins("notes",rows.map(n=>R.note(gid,n))))toast(`Įrašyta mokiniams: ${rows.length}`);break;}
   case"saveNf":{const name=S("name");const students=fd.getAll("gs");let g;
     if(v){g=grp(v);g.name=name;g.students=students;const vs=subj(g.subjectId);if(vs)vs.name=name;}
